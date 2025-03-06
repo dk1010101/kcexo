@@ -14,7 +14,10 @@ license = { file = "licenses/LICENSE.rst" }
 authors = [
   { name = "Daniel Kustrin", email = "daniel_kustrin@yahoo.co.uk" },
 ]
-dependencies = []
+dependencies = [
+  "astropy",
+  "astroplan"
+]
 dynamic = ["version"]
 
 [project.scripts]
