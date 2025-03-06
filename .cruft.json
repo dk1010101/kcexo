@@ -1,0 +1,32 @@
+{
+  "template": "https://github.com/OpenAstronomy/packaging-guide",
+  "commit": "cb394c68be7c573ddcfaeeea54757c72555eedd0",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "package_name": "kcexo",
+      "module_name": "kcexo",
+      "short_description": "Collection of exoplanet classess and operation that can be reused",
+      "author_name": "Daniel Kustrin",
+      "author_email": "daniel_kustrin@yahoo.co.uk",
+      "project_url": "",
+      "license": "GNU GPL v3+",
+      "minimum_python_version": "3.12",
+      "use_compiled_extensions": "n",
+      "enable_dynamic_dev_versions": "y",
+      "include_example_code": "y",
+      "include_cruft_update_github_workflow": "n",
+      "_sphinx_theme": "alabaster",
+      "_parent_project": "",
+      "_install_requires": "",
+      "_copy_without_render": [
+        "docs/_templates",
+        "docs/_static",
+        ".github/workflows/sub_package_update.yml"
+      ],
+      "_template": "https://github.com/OpenAstronomy/packaging-guide",
+      "_commit": "cb394c68be7c573ddcfaeeea54757c72555eedd0"
+    }
+  },
+  "directory": null
+}
