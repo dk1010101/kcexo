@@ -1,11 +1,18 @@
 # cSpell:ignore Teff logg
+# pylint:disable=missing-function-docstring
 import copy
+import pytest
+
 import astropy.units as u
 from astropy.time import Time
 from astropy.units import imperial
 from astropy.coordinates import SkyCoord
+
 from kcexo.star import Star
 from kcexo.planet import ExoClockStatus, Planet
+
+from .fixture_stars_planets import obs, all_planets, exoclock_json  # pylint:disable=unused-import
+
 
 exo_status = {
     'priority': "HIGH",
@@ -138,3 +145,33 @@ def test_full_creation():
     p2 = copy.deepcopy(p)
     p2.name = "foo"
     assert p != p2
+
+
+@pytest.mark.parametrize("exo_json", exoclock_json)
+def test_creation_from_json(all_planets, exo_json):  # pylint:disable=redefined-outer-name
+    p = Planet.from_exoclock_js(exo_json)
+    found = False
+    for pp in all_planets:
+        if pp.name == p.name:
+            assert pp.host_star == p.host_star
+            assert pp.name == p.name
+            assert pp.ephem_mid_time == p.ephem_mid_time
+            assert pp.ephem_mid_time_e == p.ephem_mid_time_e
+            assert pp.period == p.period
+            assert pp.period_e == p.period_e
+            assert pp.RpRs == p.RpRs
+            assert pp.RpRs_e == p.RpRs_e
+            assert pp.aRs == p.aRs
+            assert pp.aRs_e == p.aRs_e
+            assert pp.i == p.i
+            assert pp.i_e == p.i_e
+            assert pp.depth == p.depth
+            assert pp.duration == p.duration
+            assert pp.e == p.e
+            assert pp.e_e == p.e_e
+            assert pp.omega == p.omega
+            assert pp.omega_e == p.omega_e
+            found = True
+    assert found
+
+    

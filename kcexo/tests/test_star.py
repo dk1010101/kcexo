@@ -1,4 +1,5 @@
 # cSpell:ignore Teff logg
+# pylint:disable=missing-function-docstring
 import copy
 import astropy.units as u
 from astropy.coordinates import SkyCoord
@@ -106,3 +107,61 @@ def test_creation_no_e():
     s2 = copy.deepcopy(s)
     s2.name = "foo"
     assert s != s2
+
+
+def test_equality_exoclock():
+    s1 = Star(
+        name = star["name"],
+        c = star["c"],
+        parallax = star["parallax"] * star["parallax_t"],
+        pm_ra = star["pm_ra"] * star["pm_ra_t"],
+        pm_dec = star["pm_dec"] * star["pm_dec_t"],
+        mag = star["mag"],
+        Teff = star["Teff"] * star["Teff_t"],
+        logg = star["logg"] * star["logg_t"],
+        FeH = star["FeH"] * star["FeH_t"],
+        name_gaia = star["name_gaia"],
+        name_2mass = star["name_2mass"]
+    )
+    s2 = copy.deepcopy(s1)
+    s2.parallax *= -1.0
+    s2.pm_dec *= -1.0
+    s2.pm_ra *= -1.0
+    s2.name_gaia = "no name"
+    s2.name_2mass = "no name"
+    
+    s1.EQ_EXOCLOCK_ONLY = True
+    s2.EQ_EXOCLOCK_ONLY = True
+    assert s1 == s2
+    assert s2 == s1
+    
+def test_equality_no_exoclock():
+    s1 = Star(
+        name = star["name"],
+        c = star["c"],
+        parallax = star["parallax"] * star["parallax_t"],
+        pm_ra = star["pm_ra"] * star["pm_ra_t"],
+        pm_dec = star["pm_dec"] * star["pm_dec_t"],
+        mag = star["mag"],
+        Teff = star["Teff"] * star["Teff_t"],
+        logg = star["logg"] * star["logg_t"],
+        FeH = star["FeH"] * star["FeH_t"],
+        name_gaia = star["name_gaia"],
+        name_2mass = star["name_2mass"]
+    )
+    s2 = copy.deepcopy(s1)
+    s2.parallax *= -1.0
+    s2.pm_dec *= -1.0
+    s2.pm_ra *= -1.0
+    s2.name_gaia = "no name"
+    s2.name_2mass = "no name"
+    
+    s1.EQ_EXOCLOCK_ONLY = False
+    assert s1 != s2
+
+    # but now we don't have associative equality!
+    assert s2 == s1
+
+    # and now we do but it is not automatic!
+    s2.EQ_EXOCLOCK_ONLY = False
+    assert s2 != s1

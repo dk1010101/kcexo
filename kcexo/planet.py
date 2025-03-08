@@ -1,13 +1,19 @@
 # cSpell:ignore logg teff exoclock mmag
-from typing import Dict, Any
+from typing import Dict, Any, List
+
+import numpy as np
+
 import astropy.units as u
 from astropy.units import imperial
 from astropy.time import Time
 from astropy.coordinates import SkyCoord
 
-from astroplan import EclipsingSystem, FixedTarget
+from astroplan import EclipsingSystem
 
 from kcexo.star import Star
+from kcexo.observatory import Observatory
+from kcexo.transit import Transit
+from kcexo.calc.orbits import transit_t12
 
 
 class ExoClockStatus():
@@ -32,6 +38,7 @@ class ExoClockStatus():
     def __eq__(self, other: "ExoClockStatus") -> bool:
         """simple equality check"""
         return all([
+            isinstance(other, ExoClockStatus),
             self.priority == other.priority,
             self.min_aperture == other.min_aperture,
             self.ec_observations == other.ec_observations,
@@ -84,14 +91,16 @@ class Planet():
         self.omega_e: u.Quantity["angle"] = omega_e
         self.status: ExoClockStatus | None = status
         
-        self.fixed_target = FixedTarget(self.host_star.c, self.host_star.name)
+        self.t12: u.Quantity['time'] = self._calculate_t12()
+
         # NB: this is barycentric!
-        self.system = EclipsingSystem(self.ephem_mid_time, self.period, self.duration, self.name, self.e, self.omega.to(u.rad).value)
+        self.system_target: EclipsingSystem = EclipsingSystem(self.ephem_mid_time, self.period, self.duration, self.name, self.e, self.omega.to(u.rad).value)
         # TODO: remember that we will need to adjust for barycentric times later on
 
     def __eq__(self, other: "Planet") -> bool:
         """simple equality check"""
         return all([
+            isinstance(other, Planet),
             self.host_star == other.host_star,
             self.name == other.name,
             self.ephem_mid_time == other.ephem_mid_time,
@@ -149,7 +158,7 @@ class Planet():
         p = Planet(
             name = obj['name'],
             host_star = s,
-            ephem_mid_time = Time(js['ephem_mid_time'], format='js'),
+            ephem_mid_time = Time(obj['ephem_mid_time'], format='jd'),
             ephem_mid_time_e = obj['ephem_mid_time_e1'] * u.day,
             period = obj['ephem_period'] * u.day,
             period_e = obj['ephem_period_e1'] * u.day,
@@ -160,7 +169,7 @@ class Planet():
             i = obj['inclination'] * u.deg,
             i_e = obj['inclination_e1'] * u.deg,
             depth = obj['depth_r_mmag'] * u.mmag,
-            duration = obj['duration'] * u.hour,
+            duration = obj['duration_hours'] * u.hour,
             e = obj['eccentricity'],
             e_e = obj['eccentricity_e1'],
             omega = obj['periastron'] * u.deg,
@@ -168,3 +177,65 @@ class Planet():
             status = ecs
         )
         return p
+
+    def _calculate_t12(self) -> u.Quantity['time']:
+        """Calculate the time from the beginning of ingress/egress to the end.
+        
+        We use the same method here like ExoClock do where we solve the orbit for the values.
+        This is easiest given that orbits with inclination, eccentricity and omega all make
+        calcs rather unpleasant.
+        
+        Not of public use as the value will be calculated on instantiation and stored in `t12` attribute 
+        which is easily accessible.
+
+        Returns:
+            u.Quantity['time']: duration of the T12 (and T34) in hours
+        """
+        # TODO: use solver to find T12
+        return transit_t12(self.RpRs, self.period, self.aRs, self.e, self.i, self.omega)
+
+    def get_transits(self, 
+                     start_time: Time,
+                     end_time: Time,
+                     observatory: Observatory,
+                     night_only: bool = True) -> List[Transit]:
+        """Return all transits for a specific instrument (and thus observer) between specified dates.
+
+        Note that all the times have been adjusted for barycentric coordinates.
+
+        Args:
+            start_time (Time): Start time
+            end_time (Time): End time
+            instrument (Instrument): Observer and the instrument
+            night_only (bool, optional): Filter off anything that starts before sunset or ends after sunrise. Default is True.
+
+        Returns:
+            List[Transit]: List of transits
+        """
+        duration = (end_time - start_time).to(u.day)
+        num_transits = int(np.ceil(duration / self.period))
+        transits = self.system_target.next_primary_eclipse_time(start_time, num_transits)
+        d: u.Quantity['time'] = self.duration / 2.0
+        
+        ret = []
+        for mid_time in transits:
+            t0 = mid_time - d - observatory.exo_hours_before
+            t5 = mid_time + d + observatory.exo_hours_after
+            if t5 <= end_time:
+                if night_only:
+                    sunset = observatory.observer.sun_set_time(t0)
+                    sunrise = observatory.observer.sun_rise_time(t5)
+                    if sunset >= t0 or sunrise <= t5:
+                        continue
+                tran = Transit(
+                    pre_ingress = t0,
+                    ingress = mid_time - d,
+                    mid = mid_time,
+                    egress = mid_time + d,
+                    post_egress= t5,
+                    t12=self.t12,
+                    host_star=self.host_star,
+                    observer=observatory
+                )
+                ret.append(tran)
+        return ret
