@@ -1,4 +1,7 @@
+# -*- coding: UTF-8 -*-
+# cSpell:ignore exoclock kcexo
 import copy
+import warnings
 from pathlib import Path
 
 from typing import List, Dict, Tuple
@@ -7,7 +10,7 @@ import numpy as np
 
 import astropy.units as u
 from astropy.time import Time
-from astroplan import is_event_observable, AltitudeConstraint
+from astroplan import is_event_observable, AltitudeConstraint, TargetNeverUpWarning
 
 from kcexo.source.exoclock import ExoClock
 from kcexo.planet import Planet
@@ -16,11 +19,12 @@ from kcexo.transit import Transit
 
 
 class ExoClockData():
-    
+    """Exoclock data represented as `kcexo` objects."""
     def __init__(self,
                  file_root: Path,
-                 max_age: u.Quantity["time"]):
-        self.sc = ExoClock(file_root, max_age)
+                 file_stem_override: str = "",
+                 max_age: u.Quantity["time"] = 1 * u.day):
+        self.sc = ExoClock(file_root, file_stem_override, max_age)
         self.sc.load()
         
         self.data: Dict[str, Planet] = {}
@@ -35,7 +39,7 @@ class ExoClockData():
                      night_only: bool = True,
                      telescope_only: bool = True,
                      ) -> Dict[str, List[Transit]]:
-        """Return a map from planet name to a 
+        """Return a map from planet name to a list of transits, optionally filtered by telescope aperture and "night only" constraint.
 
         Args:
             start_time (Time): Transits start time
@@ -47,11 +51,12 @@ class ExoClockData():
         Returns:
             Dict[str, Transit]: Mapping from planet name to transit objects
         """
-        return {
-            name: p.get_transits(start_time, end_time, observatory, night_only)
-            for name, p in self.data.items()
-            if (telescope_only and (p.status.min_aperture <= observatory.aperture)) or (not telescope_only)
-        }
+        with warnings.catch_warnings(action="ignore", category=TargetNeverUpWarning):
+            return {
+                name: p.get_transits(start_time, end_time, observatory, night_only)
+                for name, p in self.data.items()
+                if (telescope_only and (p.status.min_aperture <= observatory.aperture)) or (not telescope_only)
+            }
               
     def filter_transits(self,
                         all_transits: Dict[str, List[Transit]],

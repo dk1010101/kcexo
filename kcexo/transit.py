@@ -20,6 +20,7 @@ class Transit():
                  egress: Time,
                  post_egress: Time,
                  t12: u.Quantity["time"],
+                 depth: u.Quantity,
                  host_star: Star,
                  observer: Observatory,
                  do_not_adjust_for_barycenter: bool = False) -> None:
@@ -32,6 +33,7 @@ class Transit():
             egress (Time): `t4`
             post_egress (Time): `t4` + `post ingress duration`
             t12 (u.Quantity['time']): duration between `t1` and `t2` (and `t3` and `t4` which is super super close so taken to be identical)
+            depth (u.Quantity): Depth of the transit
             host_star (Star): Star which the transiting planet orbits
             observer (Observatory): Observatory/Instrument
             do_not_adjust_for_barycenter (bool, optional): Should we *not* adjust of the barycentric times? Defaults to False meaning that we will adjust.
@@ -52,6 +54,7 @@ class Transit():
         self.egress: Time = egress
         self.post_egress: Time = post_egress
         self.t12: u.Quantity["time"] = t12
+        self.depth: u.Quantity = depth
         self.observatory: Observatory = observer
         
         if not do_not_adjust_for_barycenter:
@@ -125,6 +128,7 @@ class Transit():
         s = f"Transit [{self.host_star.name} {self.observatory.observer.name} "
         s += f"({self.pre_ingress.iso[:16]}, {self.ingress.iso[:16]}, {self.mid.iso[:16]}, {self.egress.iso[:16]}, {self.post_egress.iso[:16]}) "
         s += f"t12={str(self.t12)} "
+        s += f"depth={str(self.depth)} "
         s += f"|{Transit._t(self.problem_meridian_crossing)}|"
         s += f"{Transit._t(self.problem_twilight_astronomical)}"
         s += f"{Transit._t(self.problem_twilight_nautical)}"

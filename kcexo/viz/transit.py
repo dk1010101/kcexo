@@ -12,16 +12,30 @@ from kcexo.transit import Transit
 
 
 def create_transit_schematic(transit: Transit,
-                             depth: u.Quantity,
                              meridian_flip_duration: u.Quantity["time"],
                              max_x: int = 100,
                              name: str = "",
                              use_times: bool = True,
+                             show_labels: bool = True,
                              show_meridian_flip: bool = True,
                              show_twilight: bool = True,
                              ax: Any|None = None) -> None:
-    """_summary_
+    """Create a `matplotlib` plot of the transit profile, label t1, t2, t3, t4, t5 and t6 times
+          and show meridian flip time and duration and twilights if so requested.
 
+    Args:
+        transit (Transit): The transit that will be plotted.
+        meridian_flip_duration (u.Quantity['time']): How long will the meridian flip take?
+        max_x (int, optional): Size of the plot in the x direction in pixels. Defaults to 100.
+        name (str, optional): Name of the planet which will be used as the title. Defaults to "" which 
+            means that no title will be added.
+        use_times (bool, optional): Should actual times be used to annotate the x axis or should 
+            relative 1/2 hours from start be used? Defaults to True meaning that times will be used.
+        show_labels (bool, optional): Should x and y axis labels be shows? Defaults to True.
+        show_meridian_flip (bool, optional): Should meridian flips be shown? Defaults to True.
+        show_twilight (bool, optional): Should twilight be shown? Defaults to True.
+        ax (Any | None, optional): `matplotlib` axis to use. Defaults to None meaning that a new 
+            one will be created.
     """
     if ax is None:
         _, ax = plt.subplots(1,1)
@@ -35,16 +49,10 @@ def create_transit_schematic(transit: Transit,
     full_duration = (transit.post_egress - transit.pre_ingress).to(u.hour).value
     one_hr = max_x / full_duration
     x = [(t-transit.pre_ingress).to(u.hour).value * one_hr for t in times]
-    y = [
-        0, 
-        0,
-        0+depth.value,
-        0+depth.value,
-        0,
-        0
-    ]
-    ax.set_ylabel("Transit Depth (mmag)")
-    ax.set_xlabel("Time (hr)")
+    y = [0, 0, transit.depth.value, transit.depth.value, 0, 0]
+    if show_labels:
+        ax.set_ylabel("Transit Depth (mmag)")
+        ax.set_xlabel("Time (hr)")
     ax.invert_yaxis()
     if use_times:
         x2_tick_labels = [t.iso[11:16] for t in times]
@@ -77,5 +85,5 @@ def create_transit_schematic(transit: Transit,
             if t < full_duration:
                 w = full_duration - t
                 ax.add_patch(Rectangle(xy=(t*one_hr, yminmax[1]), height=yminmax[0]-yminmax[1], width=w*one_hr, color=c[-i-1], fill=True, zorder=-(4-i)))
-        if name:
-            ax.set_title(name)
+    if name:
+        ax.set_title(name)

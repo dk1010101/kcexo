@@ -12,7 +12,7 @@ from scipy.optimize import curve_fit as scipy_curve_fit
 
 
 def curve_fit(*args, **kwargs) -> tuple:
-    """Fit a curve"""
+    """Fit a curve while ignoring the messages about covariances."""
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore",
                                 message='Covariance of the parameters could not be estimated')
@@ -91,7 +91,7 @@ def planet_star_projected_distance(period: u.Quantity['time'],
                                    periastron: u.Quantity['angle'],
                                    mid_time: float, 
                                    time_array: list) -> float:
-    """Calculate the projected distance between the star and the planet"""
+    """Calculate the projected distance between the star and the planet."""
     _, y_t, z_t = planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array)
 
     return np.sqrt(y_t * y_t + z_t * z_t)
@@ -102,7 +102,7 @@ def transit_duration(rp_over_rs: float,
                      eccentricity: float, 
                      inclination_in: u.Quantity['angle'], 
                      periastron_in: u.Quantity['angle']) -> u.Quantity['time']:
-    """Total transit duration calculated using function solving"""
+    """Total transit duration calculated using function solving."""
     ww = periastron_in.to(u.rad).value
     ii = inclination_in.to(u.rad).value
     period = period_in.to(u.day).value
@@ -132,7 +132,7 @@ def transit_t12(rp_over_rs: float,
                 eccentricity: float, 
                 inclination: u.Quantity['angle'], 
                 periastron: u.Quantity['angle']) -> u.Quantity['time']:
-    """Transit T12 calculated using function solving"""
+    """Transit T12 calculated using function solving."""
     aprox = transit_duration(rp_over_rs, period, sma_over_rs, eccentricity, inclination, periastron).to(u.s).value
 
     def function_to_fit(_, t):

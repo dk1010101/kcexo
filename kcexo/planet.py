@@ -235,6 +235,7 @@ class Planet():
                     egress = mid_time + d,
                     post_egress= t5,
                     t12=self.t12,
+                    depth=self.depth,
                     host_star=self.host_star,
                     observer=observatory
                 )

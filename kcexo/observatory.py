@@ -68,21 +68,7 @@ class Observatory:
         self.exo_hours_before: u.Quantity["time"] = config['exo_hours_before'] * u.hour
         self.exo_hours_after: u.Quantity["time"] = config['exo_hours_after'] * u.hour
         self.meridian_crossing_duration: u.Quantity["time"] = config.get('meridian_crossing_duration_min', 10) * u.minute
-        
-        # twilight constraint
-        self.constraints: List[Constraint] = []
-        """
-        twilight = config.get('twilight', '')
-        if twilight:
-            if twilight == 'civil':
-                self.constraints.append(AtNightConstraint.twilight_civil())
-            elif twilight == 'nautical':
-                self.constraints.append(AtNightConstraint.twilight_nautical())
-            elif twilight == 'astronomical':
-                self.constraints.append(AtNightConstraint.twilight_astronomical())
-            else:
-                raise ValueError(f"Unrecognised twilight specification: '{twilight}'")
-        """
+
         # load horizon
         self.horizon: List[Tuple[float, float]] = []
         if physical_data.get('horizon_file', False):
@@ -98,7 +84,6 @@ class Observatory:
         alt = interpolator(az)
         self.horizon = list(zip(az, alt))
         self.horizon_constraint = HorizonConstraint(self.horizon, az_interpolator=interpolator)
-        self.constraints.append(self.horizon_constraint)
 
     def __eq__(self, other: Any):
         """Equality for all..."""

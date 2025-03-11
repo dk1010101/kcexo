@@ -29,6 +29,7 @@ def test_transit_t12_problems(star, transit_times, t12, mf_time, has_problems, o
                    transit_times[2], 
                    transit_times[3], transit_times[4],
                    t12,
+                   10,
                    star,
                    observer,
                    True)

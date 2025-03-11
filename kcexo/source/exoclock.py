@@ -3,6 +3,7 @@
 import itertools
 import json
 import urllib
+from pathlib import Path
 from io import StringIO
 
 import astropy.units as u
@@ -17,26 +18,24 @@ class ExoClock(Source):
     """Wrapper around Exoclock datasource"""
     name = 'exoclock'
     
-    def __init__(self, file_root, max_age = 1 * u.day):
-        super().__init__(file_root, max_age)
+    def __init__(self, 
+                 file_root: Path,
+                 file_stem_override: str = "",
+                 max_age: u.Quantity["time"] = 1 * u.day):
+        """Initialise the object. All the work is done by the parent class."""
+        super().__init__(file_root, file_stem_override, max_age)
         
-    def _load_data(self) -> None:
-        """Load data either from the cache or from online sources."""
-        if self.needs_updating():
-            # fetch new file and pickle it
-            self.log.info("Fetching the new set of exoclock data from www.exoclock.space")
-            js_str = urllib.request.urlopen('https://www.exoclock.space/database/planets_json').read().decode()
-            sio = StringIO(js_str)
-            js = json.load(sio)
-            common_keys = list(dict.fromkeys(itertools.chain.from_iterable(list(map(lambda c: list(c.keys()), js.values())))))
-            v = {k: [dic.get(k, '') for dic in js.values()] for k in common_keys}
-            exoplanets_data = Table(v, names=common_keys)
-            fix_str_types(exoplanets_data)
-            self.data['data'] = exoplanets_data
-            self.update_age()
-            self.save()
-        else:
-            self.load()
+    def _load_data_from_remote(self) -> None:
+        """Load data from the online source."""
+        self.log.info("Fetching the new set of exoclock data from www.exoclock.space")
+        js_str = urllib.request.urlopen('https://www.exoclock.space/database/planets_json').read().decode()
+        sio = StringIO(js_str)
+        js = json.load(sio)
+        common_keys = list(dict.fromkeys(itertools.chain.from_iterable(list(map(lambda c: list(c.keys()), js.values())))))
+        v = {k: [dic.get(k, '') for dic in js.values()] for k in common_keys}
+        exoplanets_data = Table(v, names=common_keys)
+        fix_str_types(exoplanets_data)
+        self.data['data'] = exoplanets_data
 
 def exoclock_to_u(exo_unit: str) -> u.Unit|float:
     """Convert exoclock unit in to an `astropy` unit"""

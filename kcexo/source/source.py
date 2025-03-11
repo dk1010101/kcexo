@@ -11,12 +11,23 @@ from astropy.table import Table
 
 
 class Source(ABC):
-    """Abstract star catalog."""
-    name = ''
+    """Abstract star catalogue."""
+    name = ""
     
     def __init__(self, 
                  file_root: Path,
+                 file_stem_override: str = "",
                  max_age: u.Quantity["time"] = 1 * u.day) -> None:
+        """Initialise the catalogue and load the data.
+
+        Args:
+            file_root (Path): Directory where the catalogue file is
+            file_stem_override (str, optional): The override of the file stem name. Default is "" meaning 'do not override'. Overrides are a **Bad Thing**(tm).
+            max_age (u.Quantity['time'], optional): How old does the catalogue need to be before it is updated? Defaults to one day.
+
+        Raises:
+            FileNotFoundError: If the stem name has not been set. This is usually a programming problem as inheriting classes will (should) set this.
+        """
         self.log = logging.getLogger()
         
         self.file_age: u.Quantity["time"]
@@ -24,18 +35,29 @@ class Source(ABC):
         self.file_root: Path = file_root
         if not self.name:
             raise FileNotFoundError("Source file name has not been set!")
-        self.file: Path = self.file_root.joinpath(self.name+".pickle")
+        self.file_stem = file_stem_override if file_stem_override else self.name
+        self.file: Path = self.file_root.joinpath(self.file_stem+".pickle")
         self.file_loaded: bool = False
 
         self.data: dict | None = None
         self._load_data()
 
-    @abstractmethod
     def _load_data(self) -> None:
+        """Load the data from wherever the data comes from"""
+        if self.needs_updating():
+            # fetch new file and pickle it
+            self._load_data_from_remote()
+            self.save()
+        else:
+            self.load()
+
+    @abstractmethod
+    def _load_data_from_remote(self) -> None:
+        """Load data from the source and set the `self.data` attribute."""
         raise NotImplementedError("Doh!")
 
     def needs_updating(self) -> bool:
-        """Give the age and date/time, does the cache need updating?"""
+        """Given the age and current date/time, does the cache need updating?"""
         if self.file.is_file():
             self.load()
             return self.file_age > self.file_max_age.to(u.s).value
@@ -44,7 +66,6 @@ class Source(ABC):
                 'update_dt': datetime.fromisoformat("1992-01-12 10:00"),  # important date! ;D
                 'data': {}
             }
-            self.update_age()
             return True
     
     def update_age(self) -> None:
@@ -52,13 +73,13 @@ class Source(ABC):
         self.data['update_dt'] = datetime.now()
     
     def save(self) -> None:
-        """Save the data to the file."""
+        """Update the age and then save the data to the file."""
         self.update_age()
         with open(self.file, "wb") as f:
             pickle.dump(self.data, f, pickle.HIGHEST_PROTOCOL)
 
     def load(self, force_load: bool = False) -> None:
-        """Load the data from the file"""
+        """Load the data from the cache file"""
         if self.data is None or not self.file_loaded or force_load:
             with open(self.file, "rb") as f:
                 self.data = pickle.load(f)
@@ -67,7 +88,9 @@ class Source(ABC):
 
 
 def fix_str_types(tab: Table) ->  None:
-    """Replace all 'O' types (which are really strings) with string types.
+    """Helper function that replaces all 'O' types in a table (which are really strings) with string types.
+
+    It is here as only data sources will need this. Perhaps it would be better off in some `util` module...
         
     Args:
         tab (Table): table to modify
