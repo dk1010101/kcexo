@@ -19,8 +19,8 @@ from kcexo.constraint.horizon_constraint import HorizonConstraint, get_interpola
 
 class SourceDefinition(NamedTuple):
     """Wrapper around data source parameters."""
-    use: bool
-    cache_life_days: float = 0.0
+    use: bool = False
+    cache_life_days: u.Quantity["time"] = 1 * u.day
 
 
 class Observatory:
@@ -71,6 +71,7 @@ class Observatory:
         
         # twilight constraint
         self.constraints: List[Constraint] = []
+        """
         twilight = config.get('twilight', '')
         if twilight:
             if twilight == 'civil':
@@ -81,7 +82,7 @@ class Observatory:
                 self.constraints.append(AtNightConstraint.twilight_astronomical())
             else:
                 raise ValueError(f"Unrecognised twilight specification: '{twilight}'")
-        
+        """
         # load horizon
         self.horizon: List[Tuple[float, float]] = []
         if physical_data.get('horizon_file', False):
@@ -157,7 +158,6 @@ class Observatories:
         config: dict = data['configuration']
         self.root_dir: Path = Path(config['root'])
         self.cache_dir: Path = self.root_dir.joinpath("cache")
-        self.cache_file: Path = self.cache_dir.joinpath(config['cache_file'])
         self.cache_image_dir: Path = self.cache_dir.joinpath("imagecache")
         data_sources: list = config['data_sources']
         self.sources = {}
@@ -170,22 +170,8 @@ class Observatories:
         # observatories
         observatories: Dict[str, Observatory] = data['observatories']
         self.observatories = {}
-        self._observatory: Observatory|None = None
         for obs in observatories:
             self.observatories[obs['name']] = Observatory(obs, self.root_dir)
-            
-        self.select_observatory(self.default_observatory)
-            
-    def select_observatory(self, name: str) -> None:
-        """Make the named observatory the selected one."""
-        self._observatory = self.observatories[name]
-        
-    @property
-    def observatory(self) -> Observatory:
-        """Return the selected observatory."""
-        if self._observatory is None:
-            self.select_observatory(self.default_observatory)
-        return self._observatory
 
     def __eq__(self, other: Any):
         """Equality for all..."""
@@ -193,11 +179,8 @@ class Observatories:
             return all([
                 self.default_observatory == other.default_observatory,
                 self.cache_dir == other.cache_dir,
-                self.cache_file == other.cache_file,
                 self.sources == other.sources,
-                self.observatories == other.observatories,
-                self.observatory == other.observatory,
-                
+                self.observatories == other.observatories                
             ])
         else:
             return False

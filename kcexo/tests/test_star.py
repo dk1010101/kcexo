@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cSpell:ignore Teff logg
 # pylint:disable=missing-function-docstring
 import copy

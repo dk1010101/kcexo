@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cSpell:ignore Angelos Tsiaras
 import warnings
 import numpy as np
@@ -21,16 +22,16 @@ def curve_fit(*args, **kwargs) -> tuple:
 def planet_orbit(period_in: u.Quantity['time'], 
                  sma_over_rs: float, 
                  eccentricity: float, 
-                 inclination: u.Quantity['angle'], 
-                 periastron: u.Quantity['angle'],
+                 inclination_in: u.Quantity['angle'], 
+                 periastron_in: u.Quantity['angle'],
                  mid_time: float, 
                  time_array: list, 
-                 ww: u.Quantity['angle'] = 0 * u.rad) -> tuple:
+                 ww_in: u.Quantity['angle'] = 0 * u.rad) -> tuple:
     """Calculate the orbit in XYZ for a planet"""
-    inclination = inclination.to(u.rad).value
-    periastron = periastron.to(u.rad).value
+    inclination = inclination_in.to(u.rad).value
+    periastron = periastron_in.to(u.rad).value
     period = period_in.to(u.day).value
-    ww = ww.to(u.rad).value
+    ww = ww_in.to(u.rad).value
     
     if eccentricity == 0 and ww == 0:
 
@@ -99,11 +100,11 @@ def transit_duration(rp_over_rs: float,
                      period_in: u.Quantity['time'], 
                      sma_over_rs: float, 
                      eccentricity: float, 
-                     inclination: u.Quantity['angle'], 
-                     periastron: u.Quantity['angle']) -> u.Quantity['time']:
+                     inclination_in: u.Quantity['angle'], 
+                     periastron_in: u.Quantity['angle']) -> u.Quantity['time']:
     """Total transit duration calculated using function solving"""
-    ww = periastron.to(u.rad).value
-    ii = inclination.to(u.rad).value
+    ww = periastron_in.to(u.rad).value
+    ii = inclination_in.to(u.rad).value
     period = period_in.to(u.day).value
     ee = eccentricity
     aa = sma_over_rs
@@ -116,13 +117,13 @@ def transit_duration(rp_over_rs: float,
     aprox = (period * (ro_pt ** 2)) / (np.pi * np.sqrt(1 - ee ** 2)) * df * 60 * 60 * 24
 
     def function_to_fit(_, t):
-        return planet_star_projected_distance(period_in, sma_over_rs, eccentricity, inclination, periastron,
+        return planet_star_projected_distance(period_in, sma_over_rs, eccentricity, inclination_in, periastron_in,
                                               10000, np.array(10000 + t / 24 / 60 / 60))
 
     popt1, _ = curve_fit(function_to_fit, [0], [1.0 + rp_over_rs], p0=[-aprox / 2])  # pylint:disable=unbalanced-tuple-unpacking
     popt2, _ = curve_fit(function_to_fit, [0], [1.0 + rp_over_rs], p0=[aprox / 2])  # pylint:disable=unbalanced-tuple-unpacking
 
-    return (popt2[0] - popt1[0]) / 24 / 60 / 60 * u.s
+    return (popt2[0] - popt1[0]) * u.s
 
 
 def transit_t12(rp_over_rs: float, 
@@ -132,15 +133,17 @@ def transit_t12(rp_over_rs: float,
                 inclination: u.Quantity['angle'], 
                 periastron: u.Quantity['angle']) -> u.Quantity['time']:
     """Transit T12 calculated using function solving"""
-    aprox = transit_duration(rp_over_rs, period, sma_over_rs, eccentricity, inclination, periastron).to(u.day)
+    aprox = transit_duration(rp_over_rs, period, sma_over_rs, eccentricity, inclination, periastron).to(u.s).value
 
     def function_to_fit(_, t):
         return planet_star_projected_distance(period, sma_over_rs, eccentricity, inclination, periastron,
                                               10000, np.array(10000 + t / 24 / 60 / 60))
 
-    popt1, _ = curve_fit(function_to_fit, [0], [1.0 + rp_over_rs], p0=[-aprox.value / 2])  # pylint:disable=unbalanced-tuple-unpacking
-    popt2, _ = curve_fit(function_to_fit, [0], [1.0 - rp_over_rs], p0=[-aprox.value / 2])  # pylint:disable=unbalanced-tuple-unpacking
+    popt1, _ = curve_fit(function_to_fit, [0], [1.0 + rp_over_rs], p0=[-aprox / 2])  # pylint:disable=unbalanced-tuple-unpacking
+    popt2, _ = curve_fit(function_to_fit, [0], [1.0 - rp_over_rs], p0=[-aprox / 2])  # pylint:disable=unbalanced-tuple-unpacking
 
-    return min((popt2[0] - popt1[0]) / 24 / 60 / 60,
-               0.5*transit_duration(rp_over_rs, period, sma_over_rs, eccentricity, inclination, periastron).to(u.second).value
-               ) * u.second
+    res = min(
+        (popt2[0] - popt1[0]) / 24 / 60 / 60,
+        0.5*transit_duration(rp_over_rs, period, sma_over_rs, eccentricity, inclination, periastron).to(u.day).value
+        ) 
+    return res * u.day

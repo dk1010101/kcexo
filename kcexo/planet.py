@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cSpell:ignore logg teff exoclock mmag
 from typing import Dict, Any, List
 
@@ -14,6 +15,7 @@ from kcexo.star import Star
 from kcexo.observatory import Observatory
 from kcexo.transit import Transit
 from kcexo.calc.orbits import transit_t12
+from kcexo.source.exoclock import exoclock_t_t, exoclock_to_u
 
 
 class ExoClockStatus():
@@ -91,7 +93,8 @@ class Planet():
         self.omega_e: u.Quantity["angle"] = omega_e
         self.status: ExoClockStatus | None = status
         
-        self.t12: u.Quantity['time'] = self._calculate_t12()
+        self.t12: u.Quantity['time']
+        self._calculate_t12()
 
         # NB: this is barycentric!
         self.system_target: EclipsingSystem = EclipsingSystem(self.ephem_mid_time, self.period, self.duration, self.name, self.e, self.omega.to(u.rad).value)
@@ -137,12 +140,12 @@ class Planet():
             pm_ra = obj.get('pm_ra', 0.0) * u.mas/u.year,
             pm_dec = obj.get('pm_dec', 0.0) * u.mas/u.year,
             mag = star_mag,
-            Teff = obj['teff'] * u.K,
-            Teff_e = obj['teff_e1'] * u.K,
-            logg = obj['logg'] * u.cm/u.s**2,
-            logg_e = obj['logg_e1'] * u.cm/u.s**2,
-            FeH = obj['meta'] * u.dex,
-            FeH_e = obj['meta_e1'] * u.dex,
+            Teff = obj['teff'] * exoclock_to_u(obj['teff_units']),
+            Teff_e = obj['teff_e1'] * exoclock_to_u(obj['teff_units']),
+            logg = obj['logg'] * exoclock_to_u(obj['logg_units']),
+            logg_e = obj['logg_e1'] * exoclock_to_u(obj['logg_units']),
+            FeH = obj['meta'] * exoclock_to_u(obj['meta_units']),
+            FeH_e = obj['meta_e1'] * exoclock_to_u(obj['meta_units']),
             name_gaia = obj.get('star_gaia', ''),
             name_2mass = obj.get('star_2mass', ''),
         )
@@ -158,41 +161,39 @@ class Planet():
         p = Planet(
             name = obj['name'],
             host_star = s,
-            ephem_mid_time = Time(obj['ephem_mid_time'], format='jd'),
-            ephem_mid_time_e = obj['ephem_mid_time_e1'] * u.day,
-            period = obj['ephem_period'] * u.day,
-            period_e = obj['ephem_period_e1'] * u.day,
-            RpRs = obj['rp_over_rs'],
-            RpRs_e = obj['rp_over_rs_e1'],
-            aRs = obj['sma_over_rs'],
-            aRs_e = obj['sma_over_rs_e1'],
-            i = obj['inclination'] * u.deg,
-            i_e = obj['inclination_e1'] * u.deg,
+            ephem_mid_time = exoclock_t_t(obj['ephem_mid_time'], obj['ephem_mid_time_format']),
+            ephem_mid_time_e = obj['ephem_mid_time_e1'] * exoclock_to_u(obj['ephem_mid_time_units']),
+            period = obj['ephem_period'] * exoclock_to_u(obj['ephem_period_units']),
+            period_e = obj['ephem_period_e1'] * exoclock_to_u(obj['ephem_period_units']),
+            RpRs = obj['rp_over_rs'] * exoclock_to_u(obj['rp_over_rs_units']),
+            RpRs_e = obj['rp_over_rs_e1'] * exoclock_to_u(obj['rp_over_rs_units']),
+            aRs = obj['sma_over_rs'] * exoclock_to_u(obj['sma_over_rs_units']),
+            aRs_e = obj['sma_over_rs_e1'] * exoclock_to_u(obj['sma_over_rs_units']),
+            i = obj['inclination'] * exoclock_to_u(obj['inclination_units']),
+            i_e = obj['inclination_e1'] * exoclock_to_u(obj['inclination_units']),
             depth = obj['depth_r_mmag'] * u.mmag,
             duration = obj['duration_hours'] * u.hour,
             e = obj['eccentricity'],
             e_e = obj['eccentricity_e1'],
-            omega = obj['periastron'] * u.deg,
-            omega_e = obj['periastron_e1'] * u.deg,
+            omega = obj['periastron'] * exoclock_to_u(obj['periastron_units']),
+            omega_e = obj['periastron_e1'] * exoclock_to_u(obj['periastron_units']),
             status = ecs
         )
         return p
 
-    def _calculate_t12(self) -> u.Quantity['time']:
+    def _calculate_t12(self) -> None:
         """Calculate the time from the beginning of ingress/egress to the end.
         
         We use the same method here like ExoClock do where we solve the orbit for the values.
         This is easiest given that orbits with inclination, eccentricity and omega all make
         calcs rather unpleasant.
         
-        Not of public use as the value will be calculated on instantiation and stored in `t12` attribute 
+        Not for public use as the value will be calculated on instantiation and stored in `t12` attribute 
         which is easily accessible.
 
-        Returns:
-            u.Quantity['time']: duration of the T12 (and T34) in hours
         """
-        # TODO: use solver to find T12
-        return transit_t12(self.RpRs, self.period, self.aRs, self.e, self.i, self.omega)
+        t12 = transit_t12(self.RpRs, self.period, self.aRs, self.e, self.i, self.omega)
+        self.t12 = t12
 
     def get_transits(self, 
                      start_time: Time,

@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 from typing import List
 
 import astropy.units as u
@@ -38,6 +39,7 @@ class Transit():
         self.meridian_crossing: Time
         self.twilight_e: List[Time] = []
         self.twilight_m: List[Time] = []
+        self.has_meridian_crossing: bool
         self.problem_meridian_crossing: bool
         self.problem_twilight_civil: bool
         self.problem_twilight_nautical: bool
@@ -88,38 +90,74 @@ class Transit():
         t3_wm = t3 - self.observatory.meridian_crossing_duration - self.TRANSIT_MARGIN
         t4_wm = t4 + self.TRANSIT_MARGIN
         
+        self.has_meridian_crossing = (t1_wm <= self.meridian_crossing <= t4_wm)
         self.problem_meridian_crossing = (t1_wm <= self.meridian_crossing <= t2_wm) or (t3_wm <= self.meridian_crossing <= t4_wm)
 
     def _set_twilight(self) -> None:
         """Save when twilights are and also if they are going to be a problem."""
         self.twilight_e = [
-            self.observatory.observer.twilight_evening_astronomical(self.pre_ingress),
+            self.observatory.observer.sun_set_time(self.pre_ingress),
+            self.observatory.observer.twilight_evening_civil(self.pre_ingress),
             self.observatory.observer.twilight_evening_nautical(self.pre_ingress),
-            self.observatory.observer.twilight_evening_civil(self.pre_ingress)
+            self.observatory.observer.twilight_evening_astronomical(self.pre_ingress)
         ]
         self.twilight_m = [
             self.observatory.observer.twilight_morning_astronomical(self.post_egress),
             self.observatory.observer.twilight_morning_nautical(self.post_egress),
-            self.observatory.observer.twilight_morning_civil(self.post_egress)
+            self.observatory.observer.twilight_morning_civil(self.post_egress),
+            self.observatory.observer.sun_rise_time(self.post_egress)
         ]
         self.problem_twilight_astronomical = False
         self.problem_twilight_nautical = False
         self.problem_twilight_civil = False
-        if self.pre_ingress <= self.twilight_e[0] or self.post_egress >= self.twilight_m[0]:
+        
+        if ((self.twilight_e[0] <= self.pre_ingress <= self.twilight_e[1]) or
+            (self.twilight_m[2] <= self.post_egress <= self.twilight_m[3])):
+            self.problem_twilight_civil = True
+        if ((self.twilight_e[1] <= self.pre_ingress <= self.twilight_e[2]) or
+            (self.twilight_m[1] <= self.post_egress <= self.twilight_m[2])):
+            self.problem_twilight_nautical = True
+        if ((self.twilight_e[2] <= self.pre_ingress <= self.twilight_e[3]) or
+            (self.twilight_m[0] <= self.post_egress <= self.twilight_m[1])):
             self.problem_twilight_astronomical = True
-            self.problem_twilight_nautical = True
-            self.problem_twilight_civil = True
-        elif self.pre_ingress <= self.twilight_e[1] or self.post_egress >= self.twilight_m[1]:
-            self.problem_twilight_nautical = True
-            self.problem_twilight_civil = True
-        elif self.pre_ingress <= self.twilight_e[2] or self.post_egress >= self.twilight_m[2]:
-            self.problem_twilight_civil = True
 
     def __str__(self):
         s = f"Transit [{self.host_star.name} {self.observatory.observer.name} "
         s += f"({self.pre_ingress.iso[:16]}, {self.ingress.iso[:16]}, {self.mid.iso[:16]}, {self.egress.iso[:16]}, {self.post_egress.iso[:16]}) "
-        s += f"t12={str(self.t12)}]"
+        s += f"t12={str(self.t12)} "
+        s += f"|{Transit._t(self.problem_meridian_crossing)}|"
+        s += f"{Transit._t(self.problem_twilight_astronomical)}"
+        s += f"{Transit._t(self.problem_twilight_nautical)}"
+        s += f"{Transit._t(self.problem_twilight_civil)}| ]"
         return s
         
     def __repr__(self):
         return str(self)
+
+    def as_list(self) -> List[Time]:
+        """Return the transit times as a list."""
+        return [
+            self.pre_ingress,
+            self.ingress,
+            self.mid,
+            self.egress,
+            self.post_egress
+        ]
+        
+    def t12345_as_list(self) -> List[Time]:
+        """Return the transit times as a list."""
+        return [
+            self.pre_ingress,
+            self.ingress,
+            self.ingress + self.t12,
+            self.egress - self.t12,
+            self.egress,
+            self.post_egress
+        ]
+        
+    @staticmethod
+    def _t(v: bool) -> str:
+        if v:
+            return '+'
+        else:
+            return '.'

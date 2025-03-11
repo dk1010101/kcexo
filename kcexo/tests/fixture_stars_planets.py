@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cSpell:ignore icrs
 # pylint:disable=missing-function-docstring
 import pytest 
@@ -139,7 +140,7 @@ planets = [
         Planet(
             name="HAT-P-20b",
             host_star=stars[0][0],
-            ephem_mid_time=Time(2457959.12043, format='jd'),
+            ephem_mid_time=Time(2457959.12043, format='jd', scale='tdb'),
             period=2.87531773 * u.day,
             RpRs=0.1284,
             aRs=11.2,
@@ -178,7 +179,7 @@ planets = [
         Planet(
             name="GPX-1b",
             host_star=stars[1][0],
-            ephem_mid_time=Time(2458770.23823, format='jd'),
+            ephem_mid_time=Time(2458770.23823, format='jd', scale='tdb'),
             period=1.744579 * u.day,
             RpRs=0.095,
             aRs=4.67,
@@ -228,7 +229,7 @@ planets = [
         Planet(
             name="TOI-1259Ab",
             host_star=stars[2][0],
-            ephem_mid_time=Time(2458996.240605, format='jd'),
+            ephem_mid_time=Time(2458996.240605, format='jd', scale='tdb'),
             period=3.4779791 * u.day,
             RpRs=0.14762,
             aRs=12.314,
@@ -269,7 +270,7 @@ planets = [
         Planet(
             name="HAT-P-9b",
             host_star=stars[3][0],
-            ephem_mid_time=Time(2456489.15311, format='jd'),
+            ephem_mid_time=Time(2456489.15311, format='jd', scale='tdb'),
             period=3.92281131 * u.day,
             RpRs=0.107,
             aRs=8.5,
