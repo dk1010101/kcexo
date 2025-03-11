@@ -13,7 +13,6 @@ from kcexo.transit import Transit
 
 def create_transit_schematic(transit: Transit,
                              meridian_flip_duration: u.Quantity["time"],
-                             max_x: int = 100,
                              name: str = "",
                              use_times: bool = True,
                              show_labels: bool = True,
@@ -26,7 +25,6 @@ def create_transit_schematic(transit: Transit,
     Args:
         transit (Transit): The transit that will be plotted.
         meridian_flip_duration (u.Quantity['time']): How long will the meridian flip take?
-        max_x (int, optional): Size of the plot in the x direction in pixels. Defaults to 100.
         name (str, optional): Name of the planet which will be used as the title. Defaults to "" which 
             means that no title will be added.
         use_times (bool, optional): Should actual times be used to annotate the x axis or should 
@@ -43,8 +41,8 @@ def create_transit_schematic(transit: Transit,
     # time offsets
     times = transit.t12345_as_list()
     
-    
     # create the plot
+    max_x = 100
     ax.set_xlim(0, max_x)
     full_duration = (transit.post_egress - transit.pre_ingress).to(u.hour).value
     one_hr = max_x / full_duration
