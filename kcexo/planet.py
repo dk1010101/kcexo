@@ -49,6 +49,20 @@ class ExoClockStatus():
             self.total_observations_recent == other.total_observations_recent,
             self.oc == other.oc
         ])
+        
+    def __str__(self):
+        s = "Status ["
+        s += f"min_ap={self.min_aperture}"
+        s += f" ec_obs={self.ec_observations}"
+        s += f" ec_obs_r={self.ec_observations_recent}"
+        s += f" t_obs={self.total_observations}"
+        s += f" t_obs_r={self.total_observations_recent}"
+        s += f" oc={self.oc}"
+        s += "]"
+        return s
+    
+    def __repr__(self):
+        return str(self)
 
 class Planet():
     """Encapsulation of an exo planet"""
@@ -241,3 +255,28 @@ class Planet():
                 )
                 ret.append(tran)
         return ret
+
+    def __str__(self):
+        s = f"Planet [{self.name} @ {self.host_star.name}"
+        s += f" ephem_mid_time={self.ephem_mid_time}"
+        s += f" period={self.period}"
+        s += f" RpRs={self.RpRs}"
+        s += f" aRs={self.aRs}"
+        s += f" i={self.i}"
+        s += f" depth={self.depth}"
+        s += f" duration={self.duration}"
+        s += f" e={self.e}"
+        s += f" omega={self.omega}"
+        s += f" ephem_mid_time_e={self.ephem_mid_time_e}"
+        s += f" period_e={self.period_e}"
+        s += f" RpRs_e={self.RpRs_e}"
+        s += f" aRs_e={self.aRs_e}"
+        s += f" i_e={self.i_e}"
+        s += f" e_e={self.e_e}"
+        s += f" omega_e={self.omega_e}"
+        s += f" {self.status}"
+        s += "]"
+        return s
+    
+    def __repr__(self):
+        return str(self)

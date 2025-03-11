@@ -136,3 +136,12 @@ class ExoClockData():
         else:
             return True
     
+    def __getitem__(self, key: str) -> Planet:
+        """Provide the [] operator to access the planet data.
+        
+        We are not going to provide `__setitem__` or `__delitem__` as no one should be changing or deleting data like that
+        and slices do not make sense for dictionaries.
+        """
+        if isinstance(key, slice):
+            raise TypeError("Slices are not supported!")
+        return self.data[key]

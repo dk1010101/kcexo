@@ -50,3 +50,30 @@ def test_transit_transits(planet, start_time, end_time, expected_transits, expec
         compare_transit_times(transits, expected_transits_sso, Transit.TRANSIT_MARGIN)
     else:
         compare_transit_times(transits, expected_transits, Transit.TRANSIT_MARGIN)
+
+
+@pytest.mark.parametrize("planet, start_time, end_time, expected_transits, expected_transits_sso", planets)
+@pytest.mark.parametrize("sunset_only", [False, True])
+def test_transit_as_list(planet, start_time, end_time, expected_transits, expected_transits_sso, obs, sunset_only):  # pylint:disable=redefined-outer-name,unused-argument
+    transits = planet.get_transits(start_time, end_time, obs, sunset_only)
+    for t in transits:
+        tl = t.as_list()
+        assert tl[0] == t.pre_ingress
+        assert tl[1] == t.ingress
+        assert tl[2] == t.mid
+        assert tl[3] == t.egress
+        assert tl[4] == t.post_egress
+
+
+@pytest.mark.parametrize("planet, start_time, end_time, expected_transits, expected_transits_sso", planets)
+@pytest.mark.parametrize("sunset_only", [False, True])
+def test_transit_t12345_as_list(planet, start_time, end_time, expected_transits, expected_transits_sso, obs, sunset_only):  # pylint:disable=redefined-outer-name,unused-argument
+    transits = planet.get_transits(start_time, end_time, obs, sunset_only)
+    for t in transits:
+        tl = t.t12345_as_list()
+        assert tl[0] == t.pre_ingress
+        assert tl[1] == t.ingress
+        assert tl[4] == t.egress
+        assert tl[5] == t.post_egress
+        assert tl[1] <= tl[2] <= tl[3]
+        assert tl[2] <= tl[3] <= tl[4]
