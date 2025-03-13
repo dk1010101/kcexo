@@ -79,11 +79,11 @@ class Observatory:
         else:
             horizon = [(0.0, 0.0), (90.0, 0.0), (180.0, 0.0), (270.0, 0.0), (360.0, 0.0)]
         # interpolate the horizon
-        interpolator = get_interpolator(horizon)
+        self.horizon_interpolator = get_interpolator(horizon)
         az = np.linspace(0, 360, 180+1)  # every 2 degrees
-        alt = interpolator(az)
+        alt = self.horizon_interpolator(az)
         self.horizon = list(zip(az, alt))
-        self.horizon_constraint = HorizonConstraint(self.horizon, az_interpolator=interpolator)
+        self.horizon_constraint = HorizonConstraint(self.horizon, az_interpolator=self.horizon_interpolator)
 
     def __eq__(self, other: Any):
         """Equality for all..."""
