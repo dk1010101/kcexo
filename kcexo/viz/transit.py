@@ -143,7 +143,12 @@ def create_sky_transit(transit: Transit,
     if style_kwargs is None:
         style_kwargs = {}
     style_kwargs = dict(style_kwargs)
-    style_kwargs.setdefault('marker', 'o')
+    if 'marker' not in style_kwargs:
+        style_kwargs.setdefault('marker', '')
+    if 'ls' not in style_kwargs and 'fmt' not in style_kwargs:
+        style_kwargs.setdefault('linestyle', '-')
+    if 'lw' not in style_kwargs:
+        style_kwargs.setdefault('linewidth', 2.5)
     
     # Grab altitude and azimuth from Astroplan objects.
     time = transit.pre_ingress + np.linspace(0, (transit.post_egress-transit.pre_ingress).to(u.hour).value, num_points)*u.hour
@@ -175,7 +180,8 @@ def create_sky_transit(transit: Transit,
         ax.set_theta_direction(-1)
 
     # Plot target coordinates.
-    ax.scatter(az_plot, alt_plot, **style_kwargs)
+    #ax.scatter(az_plot, alt_plot, **style_kwargs)
+    ax.plot(az_plot, alt_plot, **style_kwargs)
 
     # Set radial limits.
     ax.set_rlim(1, 91)
