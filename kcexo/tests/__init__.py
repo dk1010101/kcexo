@@ -1,3 +1,2 @@
-"""
-This module contains package tests.
-"""
+# -*- coding: UTF-8 -*-
+"""This module contains package tests."""

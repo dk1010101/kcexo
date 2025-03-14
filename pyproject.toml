@@ -16,7 +16,9 @@ authors = [
 ]
 dependencies = [
   "astropy",
-  "astroplan"
+  "astroplan",
+  "matplotlib",
+  "scipy"
 ]
 dynamic = ["version"]
 

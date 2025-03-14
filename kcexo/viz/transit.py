@@ -1,8 +1,10 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore mmag gainsboro
+# cSpell:ignore mmag gainsboro yaxis
 import operator
-from typing import Any
+from typing import Tuple
+
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from matplotlib.patches import Rectangle
@@ -17,6 +19,19 @@ from kcexo.transit import Transit
 twilight_transparency = [0.6, 0.4, 0.3, 0.15, 0.0]
 
 
+def _has_twin(ax):
+    """
+    Solution for detecting twin axes built on `ax`. Courtesy of
+    Jake Vanderplas http://stackoverflow.com/a/36209590/1340208
+    """
+    for other_ax in ax.figure.axes:
+        if other_ax is ax:
+            continue
+        if other_ax.bbox.bounds == ax.bbox.bounds:
+            return True
+    return False
+
+
 def create_transit_schematic(transit: Transit,
                              meridian_flip_duration: u.Quantity["time"],
                              name: str = "",
@@ -24,9 +39,11 @@ def create_transit_schematic(transit: Transit,
                              show_labels: bool = True,
                              show_meridian_flip: bool = True,
                              show_twilight: bool = True,
+                             show_grid: bool=True, 
                              style_kwargs: dict|None = None,
-                             ax: Any|None = None
-                             ) -> None:
+                             fig: matplotlib.figure.Figure|None = None,
+                             ax: matplotlib.axes.Axes|None = None
+                             ) -> Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Create a `matplotlib` plot of the transit profile, label t1, t2, t3, t4, t5 and t6 times
           and show meridian flip time and duration and twilights if so requested.
 
@@ -40,11 +57,20 @@ def create_transit_schematic(transit: Transit,
         show_labels (bool, optional): Should x and y axis labels be shows? Defaults to True.
         show_meridian_flip (bool, optional): Should meridian flips be shown? Defaults to True.
         show_twilight (bool, optional): Should twilight be shown? Defaults to True.
-        ax (Any | None, optional): `matplotlib` axis to use. Defaults to None meaning that a new 
+        show_grid (bool, optional): Draw the gird? Defaults to True.
+        fig (matplotlib.axes.Axes | None, optional): `matplotlib` figure to use. Defaults to None meaning that a new 
             one will be created.
+        ax (matplotlib.axes.Axes | None, optional): `matplotlib` axis to use. Defaults to None meaning that a new 
+            one will be created.
+            
+    Returns:
+        Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: the figure and the axis
     """
     if ax is None:
-        _, ax = plt.subplots(1,1)
+        if fig is None:
+            fig, ax = plt.subplots(1,1)
+        else:
+            ax = fig.subplots(1,1)
     if style_kwargs is None:
         style_kwargs = {}
     style_kwargs = dict(style_kwargs)
@@ -98,10 +124,10 @@ def create_transit_schematic(transit: Transit,
             ax.axvspan(twilights[i - 1][0], twilights[i][0],
                        ymin=0, ymax=1, color='grey', alpha=twi[1])
             
-    ax.grid(True)
+    ax.grid(show_grid)
     if name:
         ax.set_title(name)
-    return ax
+    return fig, ax
 
 
 def create_sky_transit(transit: Transit,
@@ -109,12 +135,13 @@ def create_sky_transit(transit: Transit,
                        obs: Observatory,
                        num_points: int = 20,
                        north_to_east_ccw: bool=False, 
-                       grid: bool=True, 
-                       horizon: bool=True,
+                       show_grid: bool=True, 
+                       show_horizon: bool=True,
                        horizon_fill_colour: str = 'gainsboro',
                        az_label_offset: u.Quantity['angle']=0.0*u.deg,
                        style_kwargs: dict|None=None,
-                       ax: Any|None = None) -> None:
+                       fig: matplotlib.figure.Figure|None = None,
+                       ax: matplotlib.axes.Axes|None = None) -> Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Draw the polar sky plot.
     
     This is a modification of the `astroplan.plot_sky` function.
@@ -125,20 +152,30 @@ def create_sky_transit(transit: Transit,
         obs (Observatory): Observatory from which we are observing
         num_points (int, optional): Number of points to plot when drawing the path. Defaults to 20.
         north_to_east_ccw (bool, optional): Should we go from N to E in counter-clockwise direction? Defaults to True.
-        grid (bool, optional): Draw the gird? Defaults to True.
-        horizon (bool, optional): Draw the horizon? Defaults to True.
+        show_grid (bool, optional): Draw the gird? Defaults to True.
+        show_horizon (bool, optional): Draw the horizon? Defaults to True.
         az_label_offset (u.Quantity['angle'], optional): Where to draw the az labels? Defaults to 0.0*u.deg.
         style_kwargs (dict | None, optional): Additional formatting parameters. Defaults to None.
+        fig (matplotlib.axes.Axes | None, optional): `matplotlib` figure to use. Defaults to None meaning that a new 
+            one will be created.
         ax (Any | None, optional): Axis to use. Defaults to None so a new one will be created.
+    
+    Returns:
+        Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: the figure and the axis
     """
     
     if ax is None:
-        if isinstance(plt.gca(), plt.PolarAxes):
-            ax = plt.gca()
-        else:
-            plt.close()
-            fig = plt.gcf()
+        if fig is None:
+            fig = plt.figure()
             ax = fig.add_subplot(projection='polar')
+        else:
+            if isinstance(fig.gca(), plt.PolarAxes):
+                ax = fig.gca()
+            else:
+                fig.clear()
+                fig.close()
+                fig = plt.figure()
+                ax = fig.add_subplot(projection='polar')
 
     if style_kwargs is None:
         style_kwargs = {}
@@ -188,14 +225,14 @@ def create_sky_transit(transit: Transit,
 
     # Grid, ticks & labels.
     # May need to set ticks and labels AFTER plotting points.
-    if grid is True:
+    if show_grid is True:
         ax.grid(True, which='major')
-    if grid is False:
+    if show_grid is False:
         ax.grid(False)
-    degree_sign = u'\N{DEGREE SIGN}'
 
     # For positively-increasing range (e.g., range(1, 90, 15)),
     # labels go from middle to outside.
+    degree_sign = u'\N{DEGREE SIGN}'
     r_labels = [
         '90' + degree_sign,
         '',
@@ -227,27 +264,14 @@ def create_sky_transit(transit: Transit,
     ax.set_rgrids(range(1, 106, 15), r_labels, angle=-45)
     ax.set_thetagrids(range(0, 360, 45), theta_labels)
     
-    if horizon:
+    if show_horizon:
         # create horizon, every 5 degrees
         h = [(x[0]*np.pi/180.0, 91-x[1]) for x in obs.horizon]  # 91 deg offset, see above
         theta = [x[0] for x in h]
         r = [x[1] for x in h]
         #ax.plot(theta, r, c='black')
         ax.fill_between(theta, r, 91, interpolate=True, color=horizon_fill_colour)
-    return ax
-
-
-def _has_twin(ax):
-    """
-    Solution for detecting twin axes built on `ax`. Courtesy of
-    Jake Vanderplas http://stackoverflow.com/a/36209590/1340208
-    """
-    for other_ax in ax.figure.axes:
-        if other_ax is ax:
-            continue
-        if other_ax.bbox.bounds == ax.bbox.bounds:
-            return True
-    return False
+    return fig, ax
 
 
 def create_transit_horizon_plot(transit: Transit,
@@ -256,20 +280,41 @@ def create_transit_horizon_plot(transit: Transit,
                                 num_points: int = 20,
                                 show_meridian_flip: bool=True,
                                 show_twilight: bool=True,
-                                airmass_yaxis: bool=True, 
-                                horizon: bool=True,
+                                show_airmass_yaxis: bool=True,
+                                show_grid: bool=True, 
+                                show_horizon: bool=True,
                                 horizon_fill_colour: str = 'gainsboro',
-                                min_altitude=0, 
-                                min_region=None,
-                                max_altitude=90, 
-                                max_region=None,
                                 style_kwargs: dict|None = None,
-                                ax: Any|None = None
-                                ) -> None:
+                                fig: matplotlib.figure.Figure|None = None,
+                                ax: matplotlib.axes.Axes|None = None
+                                ) -> Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+    """Plot the target movement accross the sky along with the horizon beneath it.
+
+    Args:
+        transit (Transit): Transit to plot.
+        planet (Planet): The planet that is transiting.
+        obs (Observatory): Which observatory is observing?
+        num_points (int, optional): Number of points to use when plotting the path accross the sky. Defaults to 20.
+        show_meridian_flip (bool, optional): Should meridian flips be shown (as red rectangle overlay)? Defaults to True.
+        show_twilight (bool, optional): Should twilights be shown (as different shades of gray)? Defaults to True.
+        show_airmass_yaxis (bool, optional): Should airmass axis be added? Defaults to True.
+        show_grid (bool, optional): Draw the gird? Defaults to True.
+        show_horizon (bool, optional): Should horizon be drawn? Defaults to True.
+        horizon_fill_colour (str, optional): What colour should be used to mark the horizon. Defaults to 'gainsboro' and no, no one knows what that is.
+        style_kwargs (dict | None, optional): _description_. Defaults to None.
+        fig (matplotlib.axes.Axes | None, optional): `matplotlib` figure to use. Defaults to None meaning that a new 
+            one will be created.
+        ax (Any | None, optional): `matplotlib` axis to use. Defaults to None so a new one will be created.
+
+    Returns:
+        Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: the figure and the axis
+    """
     # Set up plot axes and style if needed.
     if ax is None:
-        print('create_transit_horizon_plot: no ax')
-        _, ax = plt.subplots(1,1)
+        if fig is None:
+            fig, ax = plt.subplots(1,1)
+        else:
+            ax = fig.subplots(1,1)
     if style_kwargs is None:
         style_kwargs = {}
     style_kwargs = dict(style_kwargs)
@@ -298,7 +343,7 @@ def create_transit_horizon_plot(transit: Transit,
     ax.plot(time.plot_date, masked_altitude, label=target_name, **style_kwargs)
 
     # Plot the horizon
-    if horizon:
+    if show_horizon:
         y = obs.horizon_interpolator(az)
         ax.fill_between(time.plot_date, [0]*len(y), y, interpolate=True, color=horizon_fill_colour)
 
@@ -324,21 +369,13 @@ def create_transit_horizon_plot(transit: Transit,
             ax.axvspan(twilights[i - 1][0], twilights[i][0],
                        ymin=0, ymax=1, color='grey', alpha=twi[1])
 
-    ax.set_ylim([min_altitude, max_altitude])
-
-    # Draw lo/hi limit regions, if present
-    ymax, ymin = ax.get_ylim()       # should be (hi_limit, lo_limit)
-
-    if max_region is not None:
-        ax.axhspan(ymax, max_region, facecolor='#F9EB4E', alpha=0.10)
-    if min_region is not None:
-        ax.axhspan(min_region, ymin, facecolor='#F9EB4E', alpha=0.10)
+    ax.set_ylim([0, 90])
 
     # Set labels.
     ax.set_ylabel("Altitude")
     ax.set_xlabel(f"{min(time).datetime.date()} [UTC]")
 
-    if airmass_yaxis and not _has_twin(ax):
+    if show_airmass_yaxis and not _has_twin(ax):
         airmass_ticks = np.array([1, 2, 3])
         altitude_ticks = 90 - np.degrees(np.arccos(1/airmass_ticks))
 
@@ -348,5 +385,5 @@ def create_transit_horizon_plot(transit: Transit,
         ax2.set_ylim(ax.get_ylim())
         ax2.set_ylabel('Airmass')
 
-    ax.grid(True)
-    return ax
+    ax.grid(show_grid)
+    return fig, ax

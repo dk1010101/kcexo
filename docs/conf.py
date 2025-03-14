@@ -5,7 +5,10 @@
 # http://www.sphinx-doc.org/en/master/config
 
 import datetime
+import sys
+from pathlib import Path
 
+sys.path.insert(0, str(Path('..').resolve()))
 # -- Project information -----------------------------------------------------
 
 # The full version, including alpha/beta/rc tags
@@ -24,6 +27,7 @@ copyright = f"{datetime.datetime.now().year}, {author}"  # noqa: A001
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
@@ -36,8 +40,10 @@ extensions = [
     "sphinx_automodapi.smart_resolver",
 ]
 
+autosummary_generate = True
+
 # Add any paths that contain templates here, relative to this directory.
-# templates_path = ["_templates"]
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -63,7 +69,10 @@ intersphinx_mapping = {"python": ("https://docs.python.org/", None)}
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "alabaster"
+#html_theme = "alabaster"
+html_theme = 'sphinx_rtd_theme'
+html_copy_source = False
+html_show_sourcelink = False
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -80,3 +89,37 @@ html_theme = "alabaster"
 autoclass_content = "both"
 
 # -- Other options ----------------------------------------------------------
+
+# -- Options for todo extension ----------------------------------------------
+
+# If true, `todo` and `todoList` produce output, else they produce nothing.
+todo_include_todos = True
+
+# -- Options for Napoleon extension ----------------------------------------------
+
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = True
+napoleon_include_special_with_doc = False
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+# napoleon_type_aliases = None
+
+inheritance_graph_attrs = dict(rankdir="LR", size='""',
+                               fontsize=10, ratio='compress')
+
+autodoc_default_options = {
+    'autosummary': True,
+    'autosummary-no-nesting': True,
+    'autosummary-members': True,
+}
+
+autodoc_member_order = 'bysource'
+
+# inheritance_graph_attrs = dict(rankdir="TB", size='""')
+inheritance_edge_attrs = dict(dir="back", arrowtail="empty")

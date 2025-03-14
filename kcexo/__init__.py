@@ -1,10 +1,11 @@
 # -*- coding: UTF-8 -*-
+# cSpell:ignore kcexo
+"""Main `kcexo` module with objects representing stars, planets, transits and observatories"""
 from .version import version as __version__
 
 from .star import Star
 from .planet import Planet, ExoClockStatus
 from .observatory import Observatories, Observatory
-from .source.exoclock import ExoClock as ExoClockSource
 
 # Then you can be explicit to control what ends up in the namespace,
 __all__ = [
@@ -13,5 +14,4 @@ __all__ = [
     'Star', 
     'Planet', 
     'ExoClockStatus', 
-    'ExoClockSource'
 ]

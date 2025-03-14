@@ -3,9 +3,12 @@ kcexo Documentation
 
 This is the documentation for kcexo.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
+
+   kcexo
+
 
 Indices and tables
 ==================
