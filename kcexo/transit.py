@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import logging
 from typing import List
 
 import astropy.units as u
@@ -38,6 +39,8 @@ class Transit():
             observer (Observatory): Observatory/Instrument
             do_not_adjust_for_barycenter (bool, optional): Should we *not* adjust of the barycentric times? Defaults to False meaning that we will adjust.
         """
+        self.log = logging.getLogger()
+
         self.meridian_crossing: Time
         self.twilight_e: List[Time] = []
         self.twilight_m: List[Time] = []
@@ -81,7 +84,11 @@ class Transit():
         can't flip at t2 or t4 so we add (arbitrary) 10min margin as we need to make sure that the transit data is there for the detections to
         be possible.
         """
-        self.meridian_crossing = self.observatory.observer.target_meridian_transit_time(self.pre_ingress, self.host_star.target, 'nearest', n_grid_points=300)
+        self.meridian_crossing = self.observatory.observer.target_meridian_transit_time(self.pre_ingress, self.host_star.target, 'nearest', n_grid_points=10)
+        
+        # if meridian flip will happen get a more accurate value
+        if (self.pre_ingress - self.TRANSIT_MARGIN) <= self.meridian_crossing <= (self.post_egress + self.TRANSIT_MARGIN):
+            self.meridian_crossing = self.observatory.observer.target_meridian_transit_time(self.pre_ingress, self.host_star.target, 'nearest', n_grid_points=300)
         
         t1 = self.ingress
         t2 = t1 + self.t12.to(u.hour)
@@ -93,35 +100,48 @@ class Transit():
         t3_wm = t3 - self.observatory.meridian_crossing_duration - self.TRANSIT_MARGIN
         t4_wm = t4 + self.TRANSIT_MARGIN
         
-        self.has_meridian_crossing = (t1_wm <= self.meridian_crossing <= t4_wm)
+        self.has_meridian_crossing = (t1_wm <= self.meridian_crossing <= t4_wm)  # pylint:disable=superfluous-parens
         self.problem_meridian_crossing = (t1_wm <= self.meridian_crossing <= t2_wm) or (t3_wm <= self.meridian_crossing <= t4_wm)
 
     def _set_twilight(self) -> None:
         """Save when twilights are and also if they are going to be a problem."""
-        self.twilight_e = [
-            self.observatory.observer.sun_set_time(self.pre_ingress),
-            self.observatory.observer.twilight_evening_civil(self.pre_ingress),
-            self.observatory.observer.twilight_evening_nautical(self.pre_ingress),
-            self.observatory.observer.twilight_evening_astronomical(self.pre_ingress)
-        ]
-        self.twilight_m = [
-            self.observatory.observer.twilight_morning_astronomical(self.post_egress),
-            self.observatory.observer.twilight_morning_nautical(self.post_egress),
-            self.observatory.observer.twilight_morning_civil(self.post_egress),
-            self.observatory.observer.sun_rise_time(self.post_egress)
-        ]
+        self.twilight_e, self.twilight_m = self.observatory.get_twilights(self.pre_ingress, self.post_egress)
         self.problem_twilight_astronomical = False
         self.problem_twilight_nautical = False
         self.problem_twilight_civil = False
         
-        if ((self.twilight_e[0] <= self.pre_ingress <= self.twilight_e[1]) or
-            (self.twilight_m[2] <= self.post_egress <= self.twilight_m[3])):
+        if (
+            (
+                (self.twilight_e[0] is not None and self.twilight_e[1] is not None) and 
+                (self.twilight_e[0] <= self.pre_ingress <= self.twilight_e[1])
+            ) or
+            (
+                (self.twilight_m[2] is not None and self.twilight_m[3] is not None) and 
+                (self.twilight_m[2] <= self.post_egress <= self.twilight_m[3])
+            )
+           ):
             self.problem_twilight_civil = True
-        if ((self.twilight_e[1] <= self.pre_ingress <= self.twilight_e[2]) or
-            (self.twilight_m[1] <= self.post_egress <= self.twilight_m[2])):
+        if (
+            (
+                (self.twilight_e[1] is not None and self.twilight_e[2] is not None) and 
+                (self.twilight_e[1] <= self.pre_ingress <= self.twilight_e[2])
+            ) or 
+            (
+                (self.twilight_m[1] is not None and self.twilight_m[2] is not None) and 
+                (self.twilight_m[1] <= self.post_egress <= self.twilight_m[2])
+            )
+           ):
             self.problem_twilight_nautical = True
-        if ((self.twilight_e[2] <= self.pre_ingress <= self.twilight_e[3]) or
-            (self.twilight_m[0] <= self.post_egress <= self.twilight_m[1])):
+        if (
+            (
+                (self.twilight_e[2] is not None and self.twilight_e[3] is not None) and 
+                (self.twilight_e[2] <= self.pre_ingress <= self.twilight_e[3])
+            ) or
+            (
+                (self.twilight_m[0] is not None and self.twilight_m[1] is not None) and 
+                (self.twilight_m[0] <= self.post_egress <= self.twilight_m[1])
+            )
+           ):
             self.problem_twilight_astronomical = True
 
     def __str__(self):

@@ -1,5 +1,7 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore logg teff exoclock mmag
+import logging
+import warnings
 from typing import Dict, Any, List
 
 import numpy as np
@@ -9,7 +11,7 @@ from astropy.units import imperial
 from astropy.time import Time
 from astropy.coordinates import SkyCoord
 
-from astroplan import EclipsingSystem
+from astroplan import EclipsingSystem, TargetAlwaysUpWarning, TargetNeverUpWarning
 
 from kcexo.star import Star
 from kcexo.observatory import Observatory
@@ -87,6 +89,8 @@ class Planet():
                  omega_e: u.Quantity["angle"] = 0.0 * u.deg,
                  status: ExoClockStatus | None = None
                  ):
+        self.log = logging.getLogger()
+        
         self.host_star: Star = host_star
         self.name: str = name
         self.ephem_mid_time: Time = ephem_mid_time
@@ -112,7 +116,6 @@ class Planet():
 
         # NB: this is barycentric!
         self.system_target: EclipsingSystem = EclipsingSystem(self.ephem_mid_time, self.period, self.duration, self.name, self.e, self.omega.to(u.rad).value)
-        # TODO: remember that we will need to adjust for barycentric times later on
 
     def __eq__(self, other: "Planet") -> bool:
         """simple equality check"""
@@ -229,31 +232,38 @@ class Planet():
         """
         duration = (end_time - start_time).to(u.day)
         num_transits = int(np.ceil(duration / self.period))
-        transits = self.system_target.next_primary_eclipse_time(start_time, num_transits)
-        d: u.Quantity['time'] = self.duration / 2.0
-        
-        ret = []
-        for mid_time in transits:
-            t0 = mid_time - d - observatory.exo_hours_before
-            t5 = mid_time + d + observatory.exo_hours_after
-            if t5 <= end_time:
-                if night_only:
-                    sunset = observatory.observer.sun_set_time(t0)
-                    sunrise = observatory.observer.sun_rise_time(t5)
-                    if sunset >= t0 or sunrise <= t5:
-                        continue
-                tran = Transit(
-                    pre_ingress = t0,
-                    ingress = mid_time - d,
-                    mid = mid_time,
-                    egress = mid_time + d,
-                    post_egress= t5,
-                    t12=self.t12,
-                    depth=self.depth,
-                    host_star=self.host_star,
-                    observer=observatory
-                )
-                ret.append(tran)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=TargetAlwaysUpWarning)
+            warnings.filterwarnings("ignore", category=TargetNeverUpWarning)
+            transits = self.system_target.next_primary_eclipse_time(start_time, num_transits)
+            
+            d: u.Quantity['time'] = self.duration / 2.0
+            ret = []      
+            for mid_time in transits:
+                t0 = mid_time - d - observatory.exo_hours_before
+                t5 = mid_time + d + observatory.exo_hours_after
+                tw_e, tw_m = observatory.get_twilights(t0, t5)  # this is cached so should be fast
+                if t5 <= end_time:
+                    if night_only:
+                        sunset = tw_e[0]
+                        sunrise = tw_m[-1]
+                        if sunset >= t0 or sunrise <= t5:
+                            self.log.debug("Rejecting %s because ss=%s >= t0=%s or sr=%s <= t5={t5.iso}", self.name, sunset.iso, t0.iso, sunrise.iso)
+                            continue
+                        else:
+                            self.log.debug("Including  %s because ss=%s >= t0=%s or sr=%s <= t5={t5.iso}", self.name, sunset.iso, t0.iso, sunrise.iso)
+                    tran = Transit(
+                        pre_ingress = t0,
+                        ingress = mid_time - d,
+                        mid = mid_time,
+                        egress = mid_time + d,
+                        post_egress= t5,
+                        t12=self.t12,
+                        depth=self.depth,
+                        host_star=self.host_star,
+                        observer=observatory
+                    )
+                    ret.append(tran)
         return ret
 
     def __str__(self):

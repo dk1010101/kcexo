@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore mmag gainsboro yaxis
+# cSpell:ignore mmag gainsboro yaxis Vanderplas
 import operator
 from typing import Tuple
 
@@ -116,9 +116,10 @@ def create_transit_schematic(transit: Transit,
     # twilight
     if show_twilight:
         twilights = []
-        twilights.extend([((e - transit.pre_ingress).to(u.hour).value*one_hr, twilight_transparency[i]) for i, e in enumerate(transit.twilight_e)])
-        twilights.append(((transit.twilight_e[-1] - transit.pre_ingress).to(u.hour).value*one_hr, 0.0))
-        twilights.extend([((e - transit.pre_ingress).to(u.hour).value*one_hr, twilight_transparency[4-i]) for i, e in enumerate(transit.twilight_m)])
+        twilights.extend([((e - transit.pre_ingress).to(u.hour).value*one_hr, twilight_transparency[i]) for i, e in enumerate(transit.twilight_e) if e is not None])
+        if transit.twilight_e[-1] is not None:
+            twilights.append(((transit.twilight_e[-1] - transit.pre_ingress).to(u.hour).value*one_hr, 0.0))
+        twilights.extend([((e - transit.pre_ingress).to(u.hour).value*one_hr, twilight_transparency[4-i]) for i, e in enumerate(transit.twilight_m) if e is not None])
         twilights.sort(key=operator.itemgetter(0))
         for i, twi in enumerate(twilights[1:], 1):
             ax.axvspan(twilights[i - 1][0], twilights[i][0],
@@ -232,7 +233,7 @@ def create_sky_transit(transit: Transit,
 
     # For positively-increasing range (e.g., range(1, 90, 15)),
     # labels go from middle to outside.
-    degree_sign = u'\N{DEGREE SIGN}'
+    degree_sign = '\N{DEGREE SIGN}'
     r_labels = [
         '90' + degree_sign,
         '',
@@ -361,9 +362,10 @@ def create_transit_horizon_plot(transit: Transit,
     if show_twilight:
         # Calculate and order twilights and set plotting alpha for each
         twilights = []
-        twilights.extend([(e.datetime, twilight_transparency[i]) for i, e in enumerate(transit.twilight_e)])
-        twilights.append((transit.twilight_e[-1].datetime, 0.0))
-        twilights.extend([(e.datetime, twilight_transparency[4-i]) for i, e in enumerate(transit.twilight_m)])
+        twilights.extend([(e.datetime, twilight_transparency[i]) for i, e in enumerate(transit.twilight_e) if e is not None])
+        if transit.twilight_e[-1] is not None:
+            twilights.append((transit.twilight_e[-1].datetime, 0.0))
+        twilights.extend([(e.datetime, twilight_transparency[4-i]) for i, e in enumerate(transit.twilight_m) if e is not None])
         twilights.sort(key=operator.itemgetter(0))
         for i, twi in enumerate(twilights[1:], 1):
             ax.axvspan(twilights[i - 1][0], twilights[i][0],

@@ -3,6 +3,7 @@
 import logging
 import csv
 import datetime
+import functools
 from pathlib import Path
 from typing import Tuple, List, NamedTuple, Any, Dict
 
@@ -11,7 +12,8 @@ from jsonschema import Draft202012Validator
 
 import astropy.units as u
 from astropy.coordinates import EarthLocation
-from astroplan import Observer, Constraint, AtNightConstraint
+from astropy.time import Time
+from astroplan import Observer
 
 from kcexo.schema import observatories_schema
 from kcexo.constraint.horizon_constraint import HorizonConstraint, get_interpolator
@@ -36,6 +38,8 @@ class Observatory:
         is passed in.
         """
         physical_data = data['physical']
+        if np.abs(physical_data['lat_deg']*u.deg) > 65*u.deg:
+            raise ValueError("Only Longitudes below 65 degrees or above -65 degrees are supported.")
         self.location: EarthLocation = EarthLocation.from_geodetic(lon=physical_data['lon_deg'] * u.deg, 
                                                                    lat=physical_data['lat_deg'] * u.deg, 
                                                                    height=physical_data['elevation_m'] * u.m)
@@ -84,6 +88,10 @@ class Observatory:
         alt = self.horizon_interpolator(az)
         self.horizon = list(zip(az, alt))
         self.horizon_constraint = HorizonConstraint(self.horizon, az_interpolator=self.horizon_interpolator)
+        
+        # cashed version of `_get_twilight_*`
+        self._get_twilight_e = functools.lru_cache(maxsize=365*10)(self.__get_twilight_e)
+        self._get_twilight_m = functools.lru_cache(maxsize=365*10)(self.__get_twilight_m)
 
     def __eq__(self, other: Any):
         """Equality for all..."""
@@ -113,12 +121,91 @@ class Observatory:
                 self.limiting_mag == other.limiting_mag,
                 self.exo_hours_before == other.exo_hours_before,
                 self.exo_hours_after == other.exo_hours_after,
-                self.horizon == other.horizon,
-                len(self.constraints) == len(other.constraints)
+                self.horizon == other.horizon
                 # we are not checking constraints at the moment (as we don't know how it can be done) so twilight could be different
             ])
         return False
+    
+    def get_twilights(self, date1: Time, date2: Time|None = None) -> Tuple[List[Time], List[Time]]:
+        """Return all the twilights for a specific date or two.
 
+        Args:
+            date1 (Time): Date to use to look for evening twilights. This `Time` is expected to have zero time.
+            date2 (Time | None, optional): Date to use to look for morning twilights. Defaults to None meaning that the first date + half a day will be used.
+
+        Returns:
+            Tuple[List[Time], List[Time]]: A list of evening and morning twilights.
+        """
+        d1 = self.zero_time(date1, evening=True)
+        if date2 is None:
+            d2 = d1 + 12 * u.hour
+        else:
+            d2 = self.zero_time(date2, evening=False)
+        if d1 == d2:
+            d2 = d1 + 24 * u.hour
+        if d2-d1 > 1 * u.day:
+            d2 = d1 + 24 * u.hour
+        twilight_e = self._get_twilight_e(d1)
+        twilight_m = self._get_twilight_m(d2)
+        return twilight_e, twilight_m
+
+    def zero_time(self, d1: Time, evening: bool) -> Time:
+        """Take a `Time` and zero the time component while keeping the date and the rest the same.
+
+        Args:
+            d1 (Time): Date/Time to zero
+            evening (bool): If True we are zeroing evening times and if False we are zeroing morning times
+
+        Returns:
+            Time: Same Date but time will be zero
+        """
+        dt1 = d1.datetime
+        if evening:
+            if dt1.hour < 13:
+                dt1 -= datetime.timedelta(days=1)
+        else:
+            if dt1.hour >= 12:
+                dt1 += datetime.timedelta(days=1)
+        dz1 = Time(f"{dt1.year}-{dt1.month:02d}-{dt1.day:02d}", scale=d1.scale, location=d1.location, precision=d1.precision)
+        return dz1
+
+    def __get_twilight_e(self, date1: Time) -> List[Time]:
+        """Get sunset and the evening twilight times for some date.
+
+        This method is here so that it can be caches since getting these times is expensive.
+
+        Args:
+            date1 (Time): Date for which twilight times are needed
+
+        Returns:
+            List[Time]: List with the sunset time and civil, nautical and astronomical twilight end time
+        """
+        twilight_e = [
+            self.observer.sun_set_time(date1, which='next'),
+            self.observer.twilight_evening_civil(date1, which='next'),
+            self.observer.twilight_evening_nautical(date1, which='next'),
+            self.observer.twilight_evening_astronomical(date1, which='next')
+        ]
+        return [t if t.value.all() else None for t in twilight_e]
+
+    def __get_twilight_m(self, date2: Time) -> List[Time]:
+        """Get sunrise and the morning twilight times for some date.
+
+        This method is here so that it can be caches since getting these times is expensive.
+
+        Args:
+            date2 (Time): Date for which twilight times are needed
+
+        Returns:
+            List[Time]: List with the start of astronomical, nautical and civil times and the sunset time
+        """
+        twilight_m = [
+            self.observer.twilight_morning_astronomical(date2, which='next'),
+            self.observer.twilight_morning_nautical(date2, which='next'),
+            self.observer.twilight_morning_civil(date2, which='next'),
+            self.observer.sun_rise_time(date2, which='next')
+        ]
+        return [t if t.value.all() else None for t in twilight_m]
 
 class Observatories:
     """Collection of observatories and instruments we are interested in."""

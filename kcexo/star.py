@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore Teff logg exoclock
+import logging
 from typing import Dict
 
 import astropy.units as u
@@ -8,8 +9,10 @@ from astroplan import FixedTarget
 
 
 class Star():
-    EQ_EXOCLOCK_ONLY: bool = True  #: should we check just exoclock JSON attributes?
     """Simple encapsulation of a star"""
+    
+    EQ_EXOCLOCK_ONLY: bool = True  #: should we check just exoclock JSON attributes?
+    
     def __init__(self,
                  name: str,
                  c: SkyCoord,
@@ -26,6 +29,8 @@ class Star():
                  name_gaia: str = "",
                  name_2mass: str = "",
                  ):
+        self.log = logging.getLogger()
+        
         self.name_simbad: str = name
         self.name_gaia: str = name_gaia
         self.name_2mass: str = name_2mass
