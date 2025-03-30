@@ -20,7 +20,7 @@ def get_wcs(file_name: str, astap_exe: str = r"C:\Program Files\astap\astap_cli.
     Returns:
         WCS: wcs for the image
     """
-    header, data, _ = get_image_and_header(file_name)
+    header, data = get_image_and_header(file_name)
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, "tmp.fits")
         save_new_fits(header, data, path)
@@ -64,7 +64,7 @@ class FOV():
         Returns:
             FOV: FOV object
         """
-        header, _, _ = get_image_and_header(file_name)
+        header, _ = get_image_and_header(file_name)
         
         if "CTYPE1" not in header:
             wcs, header = get_wcs(file_name)

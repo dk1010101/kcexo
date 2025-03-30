@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore hmsdms OBJCTRA OBJCTDEC xlim ylim yrange
+# cSpell:ignore hmsdms OBJCTRA OBJCTDEC xlim ylim yrange kcexo
+# pylint:disable=unused-argument
 import os
 import copy
 import importlib.resources as res
@@ -28,6 +29,7 @@ from kcexo.ui.widgets.license_dialog import LicenseViewerDialog
 
 
 class MainFrame(wx.Frame):
+    """Main frame of the star comparison application"""
     def __init__(self, *args, **kwds):
         bg_col = wx.WHITE
         bg_col2 = wx.LIGHT_GREY
@@ -175,46 +177,53 @@ class MainFrame(wx.Frame):
     # event handlers
     
     def on_size_change(self, event):
+        """Handle app size change."""
         self.Refresh()
         event.Skip()
         
     def on_splitter_change(self, event):
+        """When the splitter has been moved, redraw all."""
         self.Refresh()
 
     def on_cb_filter_change(self, event):
+        """When a filter UI component changes, filter the data."""
         self.filter_data()
 
     def on_cb_nan_bv_change(self, event):
+        """When a filter UI component changes, filter the data."""
         if self.cb_bv.GetValue():
             self.on_cb_filter_change(None)
     
     def on_cb_nan_b_change(self, event):
+        """When a filter UI component changes, filter the data."""
         if self.cb_b.GetValue():
             self.on_cb_filter_change(None)
     
     def on_cb_nan_v_change(self, event):
+        """When a filter UI component changes, filter the data."""
         if self.cb_v.GetValue():
             self.on_cb_filter_change(None)
     
     def on_cb_nan_r_change(self, event):
+        """When a filter UI component changes, filter the data."""
         if self.cb_r.GetValue():
             self.on_cb_filter_change(None)
 
-    def on_grid_data_select(self, event):
-        print("Event handler 'grid_data_select' not implemented!")
-        event.Skip()
-
     def on_cb_flip(self, event):
+        """Flip the image in X or Y direction."""
         self.plot_data()
 
     def on_bt_image_stretch(self, event):
+        """Apply the stretch parameters."""
         self.plot_data()
         
     def on_bt_image_reset(self, event):
+        """Reset the image back to starting values."""
         self.set_initial_stretch()
         self.plot_data()
         
     def on_slider_image_stretch(self, event):
+        """Handle the change in the image stretch slider."""
         vmin, vmax = self.top_panel.slider_image_stretch.GetValues()
         self.top_panel.lbl_image_stretch_min.SetLabel(str(int(vmin)))
         self.top_panel.lbl_image_stretch_max.SetLabel(str(int(vmax)))
@@ -223,6 +232,7 @@ class MainFrame(wx.Frame):
             event.Skip() 
     
     def on_menu_open(self, event):
+        """Load the FITS file and show all the results."""
         with wx.FileDialog(self, 
                            "Open reduced FITS image file", 
                            wildcard="FITS file (*.fits;*.fts)|*.fits;*.fts|Compressed FITS (*.fz;*.fits.fz)|*.fz;*.fits.fz)",
@@ -234,7 +244,7 @@ class MainFrame(wx.Frame):
             pathname = file_dialog.GetPath()
             try:
                 with wx.BusyCursor():
-                    hdr, self.image_data, _ = get_image_and_header(pathname)
+                    hdr, self.image_data = get_image_and_header(pathname)
                     if hdr is None or self.image_data is None:
                         wx.MessageBox("The FITS file did not have an image section that this program recognises.", "Doh!", wx.ICON_ERROR | wx.OK)
                         return
@@ -248,6 +258,7 @@ class MainFrame(wx.Frame):
                         if 'OBJCTRA' in hdr and 'OBJCTDEC' in hdr:
                             target_c = SkyCoord(f"{hdr['OBJCTRA']} {hdr['OBJCTDEC']}", unit=(u.hourangle, u.deg))
                         elif 'RA' in hdr and 'DEC' in hdr:
+                            # since HOPS compressed file is evil
                             target_c = SkyCoord(f"{hdr['RA']} {hdr['DEC']}", unit=(u.deg, u.deg))
                         else:
                             wx.MessageBox("Cannot process FITS files without OBJECT or OBJCTRA/DEC tags.", "Really?", wx.ICON_ERROR | wx.OK)
@@ -297,6 +308,7 @@ class MainFrame(wx.Frame):
                 wx.LogError(f"Cannot open file '{pathname}'.")
 
     def on_menu_export(self, event):
+        """Export the data to file"""
         dlg = wx.FileDialog(self, "Export to CSV:", ".", "", "CSV (*.csv)|*.csv", wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
             filename = dlg.GetFilename()
@@ -307,14 +319,17 @@ class MainFrame(wx.Frame):
         wx.MessageDialog("Export completed", "Export ok")
     
     def on_menu_help_license(self, event):
+        """Show the license file from the menu"""
         text = res.read_text("kcexo.assets.comp_stars", "license.txt")
         dialog = LicenseViewerDialog(self, "License", text)
         dialog.ShowModal()
         
     def on_menu_help_about(self,event):
+        """Show the about box from the menu"""
         show_about_box(self)
 
     def on_menu_exit(self, event):
+        """Exit the app from the menu"""
         wx.CallAfter(self.Destroy)
         self.Close()
 
@@ -329,6 +344,7 @@ class MainFrame(wx.Frame):
         self.grid.select_row(pos)
 
     def on_canvas_scroll(self, event):
+        """Handle image zoom using mouse scroll wheel"""
         base_scale = .5
         cur_xlim = self.ax.get_xlim()
         cur_ylim = self.ax.get_ylim()
@@ -352,19 +368,25 @@ class MainFrame(wx.Frame):
         self.top_panel.canvas.draw() # force re-draw
 
     def on_canvas_press(self, event):
-        if event.inaxes != self.ax: return
+        """Handle image click-and-drag initial mouse click event"""
+        if event.inaxes != self.ax: 
+            return
         self.canvas_cur_xlim = self.ax.get_xlim()
         self.canvas_cur_ylim = self.ax.get_ylim()
         self.canvas_press =event.xdata, event.ydata
         self.canvas_xpress, self.canvas_ypress = self.canvas_press
 
     def on_canvas_release(self, event):
+        """Handle image click-and-drag mouse release event"""
         self.canvas_press = None
         self.ax.figure.canvas.draw()
 
     def on_canvas_motion(self, event):
-        if self.canvas_press is None: return
-        if event.inaxes != self.ax: return
+        """Handle image click-and-drag event"""
+        if self.canvas_press is None: 
+            return
+        if event.inaxes != self.ax: 
+            return
         dx = event.xdata - self.canvas_xpress
         dy = event.ydata - self.canvas_ypress
         self.canvas_cur_xlim -= dx
@@ -378,10 +400,12 @@ class MainFrame(wx.Frame):
     # state-changers
     
     def enable_all_controls(self) -> None:
+        """Make all controlled controls enabled"""
         for e in self.ed_controls:
             e.Enable(True)
         
     def disable_all_controls(self) -> None:
+        """Make all controlled controls disabled"""
         for e in self.ed_controls:
             e.Enable(False)
     
@@ -389,6 +413,7 @@ class MainFrame(wx.Frame):
     # helpers
     
     def set_initial_stretch(self) -> None:
+        """Work-out the initial image stretch values and set the ui sliders appropriately."""
         interval = MinMaxInterval()
         _, vmax = interval.get_limits(self.image_data)
         self.stretch_max = vmax
@@ -401,6 +426,7 @@ class MainFrame(wx.Frame):
         self.on_slider_image_stretch(None)
 
     def reset_stretch_slider_minmax(self) -> None:
+        """Iffy non-liner stretching slider range. This is needed as stretching is a non-linear process."""
         vmin, vmax = self.top_panel.slider_image_stretch.GetValues()
         d = vmax - vmin
         if vmin != self.stretch_prev_vmin:
@@ -421,6 +447,7 @@ class MainFrame(wx.Frame):
         self.top_panel.slider_image_stretch.SetValues(vmin, vmax)
         
     def plot_data(self) -> None:
+        """Plot the starfiled along with the stars."""
         self.top_panel.figure.clear()
         self.ax = self.top_panel.figure.add_subplot(1, 1, 1, projection=self.fov.wcs)
         self.ax.set(xlabel="RA", ylabel="Dec")
@@ -480,6 +507,7 @@ class MainFrame(wx.Frame):
         self.Refresh()
 
     def filter_data(self) -> None:
+        """Based on filter ui components, filter the data and show it."""
         filters = []
         if self.top_panel.flt_dist.GetValue():
             v = self.top_panel.flt_dist.GetValues()
