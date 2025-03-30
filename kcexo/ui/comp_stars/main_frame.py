@@ -3,6 +3,7 @@
 # pylint:disable=unused-argument
 import os
 import copy
+import warnings
 import importlib.resources as res
 
 import numpy as np
@@ -39,21 +40,14 @@ class MainFrame(wx.Frame):
         self.fov_stars: FOVStars
         self.filtered_data: Table
         self.target_name: str = ""
+        self.ax = None
         
         # image stuff
         self.image_data = None
-        self.ax = None
         self._last_pick_mouseevent = ""        
         self.stretch_prev_vmin=65535  # some bigish number
         self.stretch_prev_vmax=0
         self.stretch_max = 0
-        
-        # canvas zoom and move
-        self.canvas_cur_xlim = None
-        self.canvas_cur_ylim = None
-        self.canvas_press = None
-        self.canvas_xpress = None
-        self.canvas_ypress = None
         
         # things that can be mass-enabled or mass-disabled
         self.ed_controls = []
@@ -141,10 +135,6 @@ class MainFrame(wx.Frame):
         self.top_panel.flt_v.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.top_panel.flt_r.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.top_panel.canvas.mpl_connect('pick_event', self.on_canvas_pick)
-        self.top_panel.canvas.mpl_connect('scroll_event', self.on_canvas_scroll)
-        self.top_panel.canvas.mpl_connect('button_press_event', self.on_canvas_press)
-        self.top_panel.canvas.mpl_connect('button_release_event', self.on_canvas_release)
-        self.top_panel.canvas.mpl_connect('motion_notify_event', self.on_canvas_motion)
                 
     def create_menu_bar(self):
         """Create the simple menu bar."""
@@ -211,16 +201,22 @@ class MainFrame(wx.Frame):
 
     def on_cb_flip(self, event):
         """Flip the image in X or Y direction."""
-        self.plot_data()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            self.plot_data()
 
     def on_bt_image_stretch(self, event):
         """Apply the stretch parameters."""
-        self.plot_data()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            self.plot_data()
         
     def on_bt_image_reset(self, event):
         """Reset the image back to starting values."""
-        self.set_initial_stretch()
-        self.plot_data()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            self.set_initial_stretch()
+            self.plot_data()
         
     def on_slider_image_stretch(self, event):
         """Handle the change in the image stretch slider."""
@@ -282,8 +278,10 @@ class MainFrame(wx.Frame):
                     self.top_panel.set_filter_target_values(v)
                                         
                     self.grid.update_grid(self.filtered_data)
-                    self.set_initial_stretch()
-                    self.plot_data()
+                    with warnings.catch_warnings():
+                        warnings.simplefilter('ignore', RuntimeWarning)
+                        self.set_initial_stretch()
+                        self.plot_data()
                     
                     min_d = np.min(self.fov_stars.table['dist'])
                     max_d = np.max(self.fov_stars.table['dist'])
@@ -347,59 +345,6 @@ class MainFrame(wx.Frame):
         pos = int(label)
         self.grid.select_row(pos)
 
-    def on_canvas_scroll(self, event):
-        """Handle image zoom using mouse scroll wheel"""
-        base_scale = .5
-        cur_xlim = self.ax.get_xlim()
-        cur_ylim = self.ax.get_ylim()
-        # cur_xrange = (cur_xlim[1] - cur_xlim[0])*.5
-        # cur_yrange = (cur_ylim[1] - cur_ylim[0])*.5
-        xdata = event.xdata # get event x location
-        ydata = event.ydata # get event y location
-        if event.button == 'up':
-            # deal with zoom in
-            scale_factor = 1/base_scale
-        elif event.button == 'down':
-            # deal with zoom out
-            scale_factor = base_scale
-        else:
-            # deal with something that should never happen
-            scale_factor = 1
-            print("foo")
-        # set new limits
-        self.ax.set_xlim([xdata - (xdata-cur_xlim[0]) / scale_factor, xdata + (cur_xlim[1]-xdata) / scale_factor])
-        self.ax.set_ylim([ydata - (ydata-cur_ylim[0]) / scale_factor, ydata + (cur_ylim[1]-ydata) / scale_factor])
-        self.top_panel.canvas.draw() # force re-draw
-
-    def on_canvas_press(self, event):
-        """Handle image click-and-drag initial mouse click event"""
-        if event.inaxes != self.ax: 
-            return
-        self.canvas_cur_xlim = self.ax.get_xlim()
-        self.canvas_cur_ylim = self.ax.get_ylim()
-        self.canvas_press =event.xdata, event.ydata
-        self.canvas_xpress, self.canvas_ypress = self.canvas_press
-
-    def on_canvas_release(self, event):
-        """Handle image click-and-drag mouse release event"""
-        self.canvas_press = None
-        self.ax.figure.canvas.draw()
-
-    def on_canvas_motion(self, event):
-        """Handle image click-and-drag event"""
-        if self.canvas_press is None: 
-            return
-        if event.inaxes != self.ax: 
-            return
-        dx = event.xdata - self.canvas_xpress
-        dy = event.ydata - self.canvas_ypress
-        self.canvas_cur_xlim -= dx
-        self.canvas_cur_ylim -= dy
-        self.ax.set_xlim(self.canvas_cur_xlim)
-        self.ax.set_ylim(self.canvas_cur_ylim)
-
-        self.top_panel.canvas.draw()
-        
     ##############################################################################
     # state-changers
     
@@ -453,7 +398,7 @@ class MainFrame(wx.Frame):
     def plot_data(self) -> None:
         """Plot the starfiled along with the stars."""
         self.top_panel.figure.clear()
-        self.ax = self.top_panel.figure.add_subplot(1, 1, 1, projection=self.fov.wcs)
+        self.ax = self.top_panel.canvas.add_subplot(1, 1, 1, projection=self.fov.wcs)
         self.ax.set(xlabel="RA", ylabel="Dec")
 
         vmin, vmax = self.top_panel.slider_image_stretch.GetValues()
@@ -473,6 +418,7 @@ class MainFrame(wx.Frame):
             stretch = SqrtStretch()
         else:
             raise ValueError(f"Unknown stretch: {stretch_method}")
+        
         norm = ImageNormalize(vmin=vmin, vmax=vmax, stretch=stretch)
         self.ax.imshow(self.image_data, origin='lower', norm=norm)
         if self.top_panel.cb_flip_x.GetValue():
@@ -532,4 +478,6 @@ class MainFrame(wx.Frame):
         self.filtered_data = self.fov_stars.filter_stars(filters)
     
         self.grid.update_grid(self.filtered_data)
-        self.plot_data()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            self.plot_data()

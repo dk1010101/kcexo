@@ -38,8 +38,8 @@ class TopPanel(wx.Panel):
         ############################################
         # top left - canvas
         self.canvas_panel = MatplotlibPanel(self, wx.ID_ANY, style=wx.NO_BORDER)
-        self.figure = self.canvas_panel.plt.figure
-        self.canvas = self.canvas_panel.plt
+        self.figure = self.canvas_panel.canvas.figure
+        self.canvas = self.canvas_panel.canvas
         panel_sizer.Add(self.canvas_panel, 0, wx.EXPAND, 1)
                 
         ############################################
