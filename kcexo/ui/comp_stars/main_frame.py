@@ -14,7 +14,7 @@ from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 from astropy.table import Table
 from astropy.io import ascii as as_ascii
-from astropy.visualization import ImageNormalize, SqrtStretch, LogStretch, AsinhStretch, ZScaleInterval, SquaredStretch, MinMaxInterval, SinhStretch, LinearStretch
+from astropy.visualization import ImageNormalize
 
 import wx
 import wx.grid
@@ -24,7 +24,7 @@ from kcexo.data.fov_stars import FOVStars, MinMaxValue
 from kcexo.data.fits import get_image_and_header
 
 from kcexo.ui.comp_stars.about import show_about_box
-from kcexo.ui.comp_stars.top_pane import TopPanel
+from kcexo.ui.comp_stars.top_pane import TopPanel, EV_FILTER_CHANGE, EV_FILTER_IMG_X_FLIP, EV_FILTER_IMG_Y_FLIP, EV_FILTER_IMG_STRETCH, EV_FILTER_IMG_STRETCH_RESET, EV_FILTER_IMG_RESET
 from kcexo.ui.comp_stars.grid_pane import GridPanel
 from kcexo.ui.widgets.license_dialog import LicenseViewerDialog
 
@@ -45,9 +45,6 @@ class MainFrame(wx.Frame):
         # image stuff
         self.image_data = None
         self._last_pick_mouseevent = ""        
-        self.stretch_prev_vmin=65535  # some bigish number
-        self.stretch_prev_vmax=0
-        self.stretch_max = 0
         
         # things that can be mass-enabled or mass-disabled
         self.ed_controls = []
@@ -123,17 +120,12 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.on_size_change)
         
         ## top
-        self.top_panel.slider_image_stretch.Bind(wx.EVT_LEFT_UP, self.on_slider_image_stretch)
-        self.top_panel.bt_image_reset.Bind(wx.EVT_BUTTON, self.on_bt_image_stretch)
-        self.top_panel.bt_image_stretch_reset.Bind(wx.EVT_BUTTON, self.on_bt_image_reset)
-        self.top_panel.bt_image_stretch_apply.Bind(wx.EVT_BUTTON, self.on_bt_image_stretch)
-        self.top_panel.cb_flip_x.Bind(wx.EVT_CHECKBOX, self.on_cb_flip)
-        self.top_panel.cb_flip_y.Bind(wx.EVT_CHECKBOX, self.on_cb_flip)
-        self.top_panel.flt_dist.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        self.top_panel.flt_bv.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        self.top_panel.flt_b.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        self.top_panel.flt_v.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        self.top_panel.flt_r.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.top_panel.Bind(EV_FILTER_IMG_STRETCH, self.on_bt_image_stretch)
+        self.top_panel.Bind(EV_FILTER_IMG_STRETCH_RESET, self.on_bt_image_stretch)
+        self.top_panel.Bind(EV_FILTER_IMG_RESET, self.on_bt_image_reset)
+        self.top_panel.Bind(EV_FILTER_IMG_X_FLIP, self.on_cb_flip)
+        self.top_panel.Bind(EV_FILTER_IMG_Y_FLIP, self.on_cb_flip)
+        self.top_panel.Bind(EV_FILTER_CHANGE, self.on_filter_change)
         self.top_panel.canvas.mpl_connect('pick_event', self.on_canvas_pick)
                 
     def create_menu_bar(self):
@@ -175,29 +167,9 @@ class MainFrame(wx.Frame):
         """When the splitter has been moved, redraw all."""
         self.Refresh()
 
-    def on_cb_filter_change(self, event):
+    def on_filter_change(self, event):
         """When a filter UI component changes, filter the data."""
         self.filter_data()
-
-    def on_cb_nan_bv_change(self, event):
-        """When a filter UI component changes, filter the data."""
-        if self.cb_bv.GetValue():
-            self.on_cb_filter_change(None)
-    
-    def on_cb_nan_b_change(self, event):
-        """When a filter UI component changes, filter the data."""
-        if self.cb_b.GetValue():
-            self.on_cb_filter_change(None)
-    
-    def on_cb_nan_v_change(self, event):
-        """When a filter UI component changes, filter the data."""
-        if self.cb_v.GetValue():
-            self.on_cb_filter_change(None)
-    
-    def on_cb_nan_r_change(self, event):
-        """When a filter UI component changes, filter the data."""
-        if self.cb_r.GetValue():
-            self.on_cb_filter_change(None)
 
     def on_cb_flip(self, event):
         """Flip the image in X or Y direction."""
@@ -215,17 +187,8 @@ class MainFrame(wx.Frame):
         """Reset the image back to starting values."""
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
-            self.set_initial_stretch()
+            self.top_panel.set_initial_stretch(self.image_data)
             self.plot_data()
-        
-    def on_slider_image_stretch(self, event):
-        """Handle the change in the image stretch slider."""
-        vmin, vmax = self.top_panel.slider_image_stretch.GetValues()
-        self.top_panel.lbl_image_stretch_min.SetLabel(str(int(vmin)))
-        self.top_panel.lbl_image_stretch_max.SetLabel(str(int(vmax)))
-        self.reset_stretch_slider_minmax()
-        if event:
-            event.Skip() 
     
     def on_menu_open(self, event):
         """Load the FITS file and show all the results."""
@@ -280,7 +243,7 @@ class MainFrame(wx.Frame):
                     self.grid.update_grid(self.filtered_data)
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore', RuntimeWarning)
-                        self.set_initial_stretch()
+                        self.top_panel.set_initial_stretch(self.image_data)
                         self.plot_data()
                     
                     min_d = np.min(self.fov_stars.table['dist'])
@@ -360,40 +323,6 @@ class MainFrame(wx.Frame):
     
     # ##############################################################################
     # helpers
-    
-    def set_initial_stretch(self) -> None:
-        """Work-out the initial image stretch values and set the ui sliders appropriately."""
-        interval = MinMaxInterval()
-        _, vmax = interval.get_limits(self.image_data)
-        self.stretch_max = vmax
-        
-        interval = ZScaleInterval()
-        vmin, vmax = interval.get_limits(self.image_data)
-
-        self.top_panel.slider_image_stretch.SetValues(vmin, vmax)
-        self.reset_stretch_slider_minmax()
-        self.on_slider_image_stretch(None)
-
-    def reset_stretch_slider_minmax(self) -> None:
-        """Iffy non-liner stretching slider range. This is needed as stretching is a non-linear process."""
-        vmin, vmax = self.top_panel.slider_image_stretch.GetValues()
-        d = vmax - vmin
-        if vmin != self.stretch_prev_vmin:
-            n_min = vmin - 2*d
-        else:
-            n_min = vmin
-        if vmax != self.stretch_prev_vmax:
-            n_max = vmax + 2*d
-        else:
-            n_max = vmax
-        if n_min < 0:
-            n_min = 0
-        if n_max > self.stretch_max:
-            n_max = self.stretch_max
-        self.stretch_prev_vmin = n_min
-        self.stretch_prev_vmax = n_max
-        self.top_panel.slider_image_stretch.ResetLimits(n_min, n_max)
-        self.top_panel.slider_image_stretch.SetValues(vmin, vmax)
         
     def plot_data(self) -> None:
         """Plot the starfiled along with the stars."""
@@ -401,29 +330,16 @@ class MainFrame(wx.Frame):
         self.ax = self.top_panel.canvas.add_subplot(1, 1, 1, projection=self.fov.wcs)
         self.ax.set(xlabel="RA", ylabel="Dec")
 
-        vmin, vmax = self.top_panel.slider_image_stretch.GetValues()
+        vmin, vmax = self.top_panel.get_stretch_min_max()
 
-        stretch_method = self.top_panel.cb_image_stretch.GetCurrentSelection()
-        if stretch_method == 0: # 'linear'
-            stretch = LinearStretch()
-        elif stretch_method == 1: # 'log'
-            stretch = LogStretch()
-        elif stretch_method == 2: # 'sinh'
-            stretch = SinhStretch()
-        elif stretch_method == 3: # 'asinh'
-            stretch = AsinhStretch()
-        elif stretch_method == 4: # 'square'
-            stretch = SquaredStretch()
-        elif stretch_method == 5: # 'sqrt'
-            stretch = SqrtStretch()
-        else:
-            raise ValueError(f"Unknown stretch: {stretch_method}")
-        
+        stretch = self.top_panel.get_stretch_method() 
         norm = ImageNormalize(vmin=vmin, vmax=vmax, stretch=stretch)
         self.ax.imshow(self.image_data, origin='lower', norm=norm)
-        if self.top_panel.cb_flip_x.GetValue():
+        
+        invert_x, invert_y = self.top_panel.get_image_xy_flip()
+        if invert_x:
             self.ax.invert_xaxis()
-        if self.top_panel.cb_flip_y.GetValue():
+        if invert_y:
             self.ax.invert_yaxis()
         
         target = self.filtered_data[0]['Object']
@@ -459,21 +375,11 @@ class MainFrame(wx.Frame):
     def filter_data(self) -> None:
         """Based on filter ui components, filter the data and show it."""
         filters = []
-        if self.top_panel.flt_dist.GetValue():
-            v = self.top_panel.flt_dist.GetValues()
-            filters.append(MinMaxValue('dist', v[0], v[1], v[2]))
-        if self.top_panel.flt_bv.GetValue():
-            v = self.top_panel.flt_bv.GetValues()
-            filters.append(MinMaxValue('B-V', v[0], v[1], v[2]))
-        if self.top_panel.flt_b.GetValue():
-            v = self.top_panel.flt_b.GetValues()
-            filters.append(MinMaxValue('B', v[0], v[1], v[2]))
-        if self.top_panel.flt_v.GetValue():
-            v = self.top_panel.flt_v.GetValues()
-            filters.append(MinMaxValue('V', v[0], v[1], v[2]))
-        if self.top_panel.flt_r.GetValue():
-            v = self.top_panel.flt_r.GetValues()
-            filters.append(MinMaxValue('R', v[0], v[1], v[2]))
+        state = self.top_panel.get_filters_states()
+        for filter in ['dist', 'B-V', 'B', 'V', 'R']:
+            if state[filter][0]:
+                v = state[filter][1]
+                filters.append(MinMaxValue(filter, v[0], v[1], v[2]))
         
         self.filtered_data = self.fov_stars.filter_stars(filters)
     

@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+# pylint-disable=unused-argument
 
 import wx
 
@@ -6,8 +7,9 @@ from .range_slider import RangeSlider
 
 
 class ValFilter(wx.Panel):
+    """Representation of a value filter used to select a range of values between some min and max."""
     def __init__(self, parent, 
-                 id=wx.ID_ANY, 
+                 wid=wx.ID_ANY, 
                  title: str="", 
                  target_value: float=0.0,
                  min_val: float=0.0,
@@ -24,7 +26,7 @@ class ValFilter(wx.Panel):
         self.num_precision: int = num_precision
         self.has_nan: bool = has_nan
         
-        super().__init__(parent=parent, id=id, pos=pos, size=size, name=name)
+        super().__init__(parent=parent, id=wid, pos=pos, size=size, name=name)
         
         top_sizer = wx.GridBagSizer(5, 5)
         
@@ -94,21 +96,20 @@ class ValFilter(wx.Panel):
             self.cb_nan.Bind(wx.EVT_CHECKBOX, self.on_cb_nan)
         self.cb_use.Bind(wx.EVT_CHECKBOX, self.on_cb_val)
         self.slider.Bind(wx.EVT_SLIDER, self.on_slider_change)
-        
-        
+    
     def on_cb_nan(self, event):
         if self.cb_use.GetValue():
-            self.PostCB()
+            self.post_checkbox_event()
             
     def on_cb_val(self, event):
-        self.PostCB()
+        self.post_checkbox_event()
         
     def on_slider_change(self, event):
         low, high = self.slider.GetValues()
         self.lbl_min.SetLabel(f"{low:.{self.num_precision}f}")
         self.lbl_max.SetLabel(f"{high:.{self.num_precision}f}")
         if self.cb_use.GetValue():
-            self.PostCB()
+            self.post_checkbox_event()
         
     def Enable(self, enable=True):
         super().Enable(enable)
@@ -118,7 +119,7 @@ class ValFilter(wx.Panel):
         super().Disable()
         self.Refresh()
         
-    def PostCB(self):
+    def post_checkbox_event(self):
         event = wx.PyCommandEvent(wx.EVT_CHECKBOX.typeId, self.parent.GetId())
         event.SetEventObject(self.parent)
         #wx.PostEvent(self.parent.GetEventHandler(), event)

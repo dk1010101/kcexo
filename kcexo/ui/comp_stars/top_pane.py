@@ -1,19 +1,36 @@
 # -*- coding: UTF-8 -*-
+from typing import Tuple, Any
+
 import wx
 
+from astropy.visualization import SqrtStretch, LogStretch, AsinhStretch, ZScaleInterval, SquaredStretch, MinMaxInterval, SinhStretch, LinearStretch
+
+from kcexo.ui.widgets.new_event import new_command_event
 from kcexo.ui.widgets.range_slider import RangeSlider
 from kcexo.ui.widgets.filter_control import ValFilter
 from kcexo.ui.widgets.mpl_canvas import MatplotlibPanel
 
-# TODO: create new events so that we don't have to bind to everything
+
+FilterChangeEvent, EV_FILTER_CHANGE = new_command_event()
+ImageXFlipEvent, EV_FILTER_IMG_X_FLIP = new_command_event()
+ImageYFlipEvent, EV_FILTER_IMG_Y_FLIP = new_command_event()
+ImageStretchEvent, EV_FILTER_IMG_STRETCH = new_command_event()
+ImageStretchResetEvent, EV_FILTER_IMG_STRETCH_RESET = new_command_event()
+ImageResetEvent, EV_FILTER_IMG_RESET = new_command_event()
+
 
 class TopPanel(wx.Panel):
     """Top pane panel for the comparator star tool"""
-    def __init__(self, parent, id=wx.ID_ANY, 
+    def __init__(self, parent, wid=wx.ID_ANY, 
                  background_colour: wx.Colour=wx.WHITE, 
                  pos=wx.DefaultPosition, size=wx.DefaultSize, 
                  name='topPanel'):
-        super().__init__(parent=parent, id=id, pos=pos, size=size, name=name)
+        super().__init__(parent=parent, id=wid, pos=pos, size=size, name=name)
+
+        self.stretch_prev_vmin=65535  # some bigish number
+        self.stretch_prev_vmax=0
+        self.stretch_max = 0
+
         self.controls_collection = []
         self.background_colour = background_colour
         
@@ -68,6 +85,7 @@ class TopPanel(wx.Panel):
         self.controls_collection.append(self.canvas_panel)
      
     def create_image_manipulation_panel(self, parent: wx.Panel, bg_col: wx.Colour) -> wx.Panel:
+        """Creates the panel used to stretch, flip etc the image."""
         
         panel = wx.Panel(parent, -1)
         panel.SetBackgroundColour(bg_col)
@@ -123,6 +141,12 @@ class TopPanel(wx.Panel):
         # self.bt_image_stretch_apply.Bind(wx.EVT_BUTTON, self.on_bt_image_stretch)
         # self.cb_flip_x.Bind(wx.EVT_CHECKBOX, self.on_cb_flip)
         # self.cb_flip_y.Bind(wx.EVT_CHECKBOX, self.on_cb_flip)
+        self.bt_image_reset.Bind(wx.EVT_BUTTON, self.on_bt_image_reset)
+        self.bt_image_stretch_reset.Bind(wx.EVT_BUTTON, self.on_bt_image_stretch_reset)
+        self.bt_image_stretch_apply.Bind(wx.EVT_BUTTON, self.on_bt_image_stretch)
+        self.cb_flip_x.Bind(wx.EVT_CHECKBOX, self.on_cb_flip_x)
+        self.cb_flip_y.Bind(wx.EVT_CHECKBOX, self.on_cb_flip_y)
+        self.slider_image_stretch.Bind(wx.EVT_LEFT_UP, self.on_slider_image_stretch)
         
         #####
         # add to enable/disable list
@@ -207,12 +231,12 @@ class TopPanel(wx.Panel):
         
         ########
         # events        
-        # self.flt_dist.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        # self.flt_bv.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        # self.flt_b.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        # self.flt_v.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        # self.flt_r.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        
+        self.flt_dist.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.flt_bv.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.flt_b.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.flt_v.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.flt_r.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+    
         #####
         # add to enable/disable list
         
@@ -227,6 +251,7 @@ class TopPanel(wx.Panel):
         return panel
 
     def set_filter_target_values(self, target_vals: dict) -> None:
+        """Give a dictionary of values, set the filter target values."""
         self.flt_dist.SetTargetValue(target_vals['dist'])
         self.flt_bv.SetTargetValue(target_vals['B-V'])
         self.flt_b.SetTargetValue(target_vals['B'])
@@ -234,8 +259,114 @@ class TopPanel(wx.Panel):
         self.flt_r.SetTargetValue(target_vals['R'])
     
     def set_filter_minmax(self, minmax_vals: dict) -> None:
+        """Give a dictionary of values, set the filter min-max values."""
         self.flt_dist.SetMinMax(*minmax_vals['dist'])
         self.flt_bv.SetMinMax(*minmax_vals['B-V'])
         self.flt_b.SetMinMax(*minmax_vals['B'])
         self.flt_v.SetMinMax(*minmax_vals['V'])
         self.flt_r.SetMinMax(*minmax_vals['R'])
+
+    def set_initial_stretch(self, image_data) -> None:
+        """Work-out the initial image stretch values and set the ui sliders appropriately."""
+        interval = MinMaxInterval()
+        _, vmax = interval.get_limits(image_data)
+        self.stretch_max = vmax
+        
+        interval = ZScaleInterval()
+        vmin, vmax = interval.get_limits(image_data)
+
+        self.slider_image_stretch.SetValues(vmin, vmax)
+        self.reset_stretch_slider_minmax()
+        self.on_slider_image_stretch(None)
+
+    def reset_stretch_slider_minmax(self) -> None:
+        """Iffy non-liner stretching slider range. This is needed as stretching is a non-linear process."""
+        vmin, vmax = self.slider_image_stretch.GetValues()
+        d = vmax - vmin
+        if vmin != self.stretch_prev_vmin:
+            n_min = vmin - 2*d
+        else:
+            n_min = vmin
+        if vmax != self.stretch_prev_vmax:
+            n_max = vmax + 2*d
+        else:
+            n_max = vmax
+        if n_min < 0:
+            n_min = 0
+        if n_max > self.stretch_max:
+            n_max = self.stretch_max
+        self.stretch_prev_vmin = n_min
+        self.stretch_prev_vmax = n_max
+        self.slider_image_stretch.ResetLimits(n_min, n_max)
+        self.slider_image_stretch.SetValues(vmin, vmax)
+
+    def on_cb_filter_change(self, event):
+        """If the `use` checkbox has changed value, post the change event."""
+        wx.PostEvent(self, FilterChangeEvent(event.GetId()))
+
+    def on_bt_image_reset(self, event):
+        """Is the image reset has been pushed, trigger the image reset event."""
+        wx.PostEvent(self, ImageResetEvent(event.GetId()))
+        
+    def on_bt_image_stretch_reset(self, event):
+        """Is the image stretch reset has been pushed, trigger the image stretch reset event."""
+        wx.PostEvent(self, ImageStretchResetEvent(event.GetId()))
+        
+    def on_bt_image_stretch(self, event):
+        """Is the image stretch has been pushed, trigger the image stretch event."""
+        wx.PostEvent(self, ImageStretchEvent(event.GetId()))
+        
+    def on_cb_flip_x(self, event):
+        """Is the image x-axis flip has been selected, trigger the x-axis flip event."""
+        wx.PostEvent(self, ImageXFlipEvent(event.GetId()))
+        
+    def on_cb_flip_y(self, event):
+        """Is the image y-axis flip has been selected, trigger the y-axis flip event."""
+        wx.PostEvent(self, ImageYFlipEvent(event.GetId()))
+        
+    def on_slider_image_stretch(self, event):
+        """Handle the change in the image stretch slider."""
+        vmin, vmax = self.slider_image_stretch.GetValues()
+        self.lbl_image_stretch_min.SetLabel(str(int(vmin)))
+        self.lbl_image_stretch_max.SetLabel(str(int(vmax)))
+        self.reset_stretch_slider_minmax()
+        if event:
+            event.Skip() 
+
+    def get_stretch_min_max(self) -> Tuple[int, int]:
+        """Get current min/max from the stretch slider"""
+        return self.slider_image_stretch.GetValues()
+    
+    def get_stretch_method(self) -> Any:
+        """Get the index of the stretch method choice widget"""
+        stretch_method = self.cb_image_stretch.GetCurrentSelection()
+        if stretch_method == 0: # 'linear'
+            stretch = LinearStretch()
+        elif stretch_method == 1: # 'log'
+            stretch = LogStretch()
+        elif stretch_method == 2: # 'sinh'
+            stretch = SinhStretch()
+        elif stretch_method == 3: # 'asinh'
+            stretch = AsinhStretch()
+        elif stretch_method == 4: # 'square'
+            stretch = SquaredStretch()
+        elif stretch_method == 5: # 'sqrt'
+            stretch = SqrtStretch()
+        else:
+            raise ValueError(f"Unknown stretch: {stretch_method}")
+        return stretch
+    
+    def get_image_xy_flip(self) -> Tuple[bool, bool]:
+        """Get if x or y axis should be flipped."""
+        return (self.cb_flip_x.GetValue(), self.cb_flip_y.GetValue())
+    
+    def get_filters_states(self) -> dict:
+        """Get the state of all the filters."""
+        r = {
+            'dist': (self.flt_dist.GetValue(), self.flt_dist.GetValues()),
+            'B-V': (self.flt_bv.GetValue(), self.flt_bv.GetValues()),
+            'B': (self.flt_b.GetValue(), self.flt_b.GetValues()),
+            'V': (self.flt_v.GetValue(), self.flt_v.GetValues()),
+            'R': (self.flt_r.GetValue(), self.flt_r.GetValues()),
+        }
+        return r
