@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import io
 import matplotlib as plt
 

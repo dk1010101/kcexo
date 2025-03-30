@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cspell:ignore ICRS TICID otype vartyp oidref vmax vmin magtyp
 
 from typing import NamedTuple, List

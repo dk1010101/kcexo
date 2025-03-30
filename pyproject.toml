@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kcexo"
-description = "Collection of exoplanet classes and scripts"
+description = "Collection of randome exoplanet observation planning and analysis scripts and libraries"
 requires-python = ">=3.12"
 readme = { file = "README.rst", content-type = "text/x-rst" }
 license = { file = "licenses/LICENSE.rst" }
@@ -15,16 +15,18 @@ authors = [
   { name = "Daniel Kustrin", email = "daniel_kustrin@yahoo.co.uk" },
 ]
 dependencies = [
+  "numpy",
+  "scipy",
+  "pyvo",
+  "matplotlib",
   "astropy",
   "astroplan",
-  "matplotlib",
-  "scipy",
   "wxpython"
 ]
 dynamic = ["version"]
 
 [project.scripts]
-exo_comp_stars = "kcexo.ui.comp_stars.exo_comp_stars:main"
+kc_comp_stars = "kcexo.ui.comp_stars.exo_comp_stars:main"
 
 [project.optional-dependencies]
 test = [

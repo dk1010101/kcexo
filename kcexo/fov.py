@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # cSpell:ignore astap NAXIS
 import os
 import subprocess

@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import wx
 
 from kcexo.ui.widgets.range_slider import RangeSlider
