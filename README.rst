@@ -5,10 +5,23 @@ What is included?
 -----------------
 
 At the moment, there are two main components:
-    1. a library with various approaches to calculate and plan exoplanet observations
+
+    1. a library with various mechanism to calculate and plan exoplanet observations
     2. a tool `kc_comp_stars.exe` that can be used to analyse existing reduced images
        and find decent comparator stars. Finding decent comparator stars is not guaranteed...
 
+What is coming next?
+--------------------
+
+There are a couple of tools being developed, one that can be used for planning of exoplanet observations
+longer-term and one that is used for more short term (day-before) planning. As a teaser, this is the graph
+output from the long-term planner:
+
+.. image:: kcexo/assets/example_plan_graph.png
+  :width: 600
+  :alt: Example of the comparator star finder tool in action
+
+the intent is for the above to become a report that can be used within the tool but also outside.
 
 Using the comparator star finding tool
 --------------------------------------
