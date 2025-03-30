@@ -2,6 +2,7 @@
 # cSpell:ignore hmsdms OBJCTRA OBJCTDEC xlim ylim yrange
 import os
 import copy
+import importlib.resources as res
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,6 +23,7 @@ from kcexo.data.fov_stars import FOVStars, MinMaxValue
 from kcexo.ui.comp_stars.about import show_about_box
 from kcexo.ui.comp_stars.top_pane import TopPanel
 from kcexo.ui.comp_stars.grid_pane import GridPanel
+from kcexo.ui.widgets.license_dialog import LicenseViewerDialog
 
 
 class MainFrame(wx.Frame):
@@ -155,9 +157,9 @@ class MainFrame(wx.Frame):
         frame_menubar.Append(menu_file, "File")
         #
         menu_help = wx.Menu()
-        #item = menu_help.Append(wx.ID_ANY, "Welcome", "")
-        #self.Bind(wx.EVT_MENU, self.on_menu_help_welcome, item)
-        #menu_help.AppendSeparator()
+        item = menu_help.Append(wx.ID_ANY, "License", "")
+        self.Bind(wx.EVT_MENU, self.on_menu_help_license, item)
+        menu_help.AppendSeparator()
         item = menu_help.Append(wx.ID_ANY, "About", "")
         self.Bind(wx.EVT_MENU, self.on_menu_help_about, item)
         frame_menubar.Append(menu_help, "Help")
@@ -295,8 +297,10 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
         wx.MessageDialog("Export completed", "Export ok")
     
-    def on_menu_help_welcome(self, event):
-        print("Not implemented")
+    def on_menu_help_license(self, event):
+        text = res.read_text("kcexo.assets.comp_stars", "license.txt")
+        dialog = LicenseViewerDialog(self, "License", text)
+        dialog.ShowModal()
         
     def on_menu_help_about(self,event):
         show_about_box(self)
