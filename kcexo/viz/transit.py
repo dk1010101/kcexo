@@ -197,6 +197,8 @@ def create_sky_transit(transit: Transit,
     target_name = planet.name
     style_kwargs.setdefault('label', target_name)
 
+    ax.tick_params(labelsize=10)
+
     # We only want to plot positions above the horizon.
     az_plot = None
     for alt in range(0, len(altitude)):  # pylint:disable=consider-using-enumerate

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kcexo"
-description = "Collection of exoplanet classess and operation that can be reused"
+description = "Collection of exoplanet classes and scripts"
 requires-python = ">=3.12"
 readme = { file = "README.rst", content-type = "text/x-rst" }
 license = { file = "licenses/LICENSE.rst" }
@@ -18,12 +18,13 @@ dependencies = [
   "astropy",
   "astroplan",
   "matplotlib",
-  "scipy"
+  "scipy",
+  "wxpython"
 ]
 dynamic = ["version"]
 
 [project.scripts]
-open_astronomy_package_template_example = "kcexo.example_mod:main"
+exo_comp_stars = "kcexo.ui.comp_stars.exo_comp_stars:main"
 
 [project.optional-dependencies]
 test = [
@@ -43,7 +44,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["kcexo*"]
-exclude = ["kcexo._dev*"]
+exclude = ["kcexo._dev*", "kcexo.*.play*"]
 
 [tool.setuptools_scm]
 version_file = "kcexo/_version.py"
