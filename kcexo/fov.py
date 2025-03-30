@@ -1,10 +1,13 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore astap NAXIS
 import os
+import tempfile
 import subprocess
 
 from astropy.io import fits
 from astropy.wcs import WCS
+
+from kcexo.data.fits import get_image_and_header, save_new_fits
 
 
 def get_wcs(file_name: str, astap_exe: str = r"C:\Program Files\astap\astap_cli.exe") -> WCS:
@@ -12,21 +15,26 @@ def get_wcs(file_name: str, astap_exe: str = r"C:\Program Files\astap\astap_cli.
 
     Args:
         file_name (str): Original image.
-        astap_exe (str, optional): Location of the ASTAP CLI binary. Defaults to r"C:\Program Files\astap\astap_cli.exe".
+        astap_exe (str, optional): Location of the ASTAP CLI binary. Defaults to "C:\\Program Files\\astap\\astap_cli.exe".
 
     Returns:
         WCS: wcs for the image
     """
-    subprocess.run([astap_exe, "-f", file_name, "-wcs", "-sip", "add", "y"], check=True)
-    wcs_file = file_name.rsplit('.', maxsplit=1)[0]+".wcs"
-    file_header = fits.Header.fromfile(file_name)
-    wcs_fits_header = fits.Header.fromfile(wcs_file)
-    if wcs_fits_header['NAXIS'] == 0:
-        wcs_fits_header.set('NAXIS', 2, 'Number of axes')
-        wcs_fits_header.insert('NAXIS', ('NAXIS1', file_header['NAXIS1'], file_header.comments['NAXIS1']), after=True)
-        wcs_fits_header.insert('NAXIS', ('NAXIS2', file_header['NAXIS2'], file_header.comments['NAXIS2']), after=True)
-    os.remove(wcs_file)
-    return WCS(wcs_fits_header)
+    header, data, _ = get_image_and_header(file_name)
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "tmp.fits")
+        save_new_fits(header, data, path)
+        subprocess.run([astap_exe, "-f", path, "-wcs", "-sip", "add", "y"], check=True)
+    
+        wcs_file = path.rsplit('.', maxsplit=1)[0]+".wcs"
+        header = fits.Header.fromfile(path)
+        wcs_fits_header = fits.Header.fromfile(wcs_file)
+        if wcs_fits_header['NAXIS'] == 0:
+            wcs_fits_header.set('NAXIS', 2, 'Number of axes')
+            wcs_fits_header.insert('NAXIS', ('NAXIS1', header['NAXIS1'], header.comments['NAXIS1']), after=True)
+            wcs_fits_header.insert('NAXIS', ('NAXIS2', header['NAXIS2'], header.comments['NAXIS2']), after=True)
+    
+    return WCS(wcs_fits_header), header
 
 
 class FOV():
@@ -47,7 +55,7 @@ class FOV():
     
     
     @staticmethod
-    def from_image(file_name: str, hdu_image_position: int=0) -> "FOV":
+    def from_image(file_name: str) -> "FOV":
         """Create FOV object from a file name.
 
         Args:
@@ -56,11 +64,10 @@ class FOV():
         Returns:
             FOV: FOV object
         """
-        hdu = fits.open(file_name)
-        header = hdu[hdu_image_position].header
+        header, _, _ = get_image_and_header(file_name)
         
         if "CTYPE1" not in header:
-            wcs = get_wcs(file_name)
+            wcs, header = get_wcs(file_name)
         else:
             wcs = WCS(header)
 

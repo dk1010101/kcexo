@@ -11,7 +11,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 from astropy.table import Table
-from astropy.io import fits, ascii as as_ascii
+from astropy.io import ascii as as_ascii
 from astropy.visualization import ImageNormalize, SqrtStretch, LogStretch, AsinhStretch, ZScaleInterval, SquaredStretch, MinMaxInterval, SinhStretch, LinearStretch
 
 import wx
@@ -19,6 +19,7 @@ import wx.grid
 
 from kcexo.fov import FOV
 from kcexo.data.fov_stars import FOVStars, MinMaxValue
+from kcexo.data.fits import get_image_and_header
 
 from kcexo.ui.comp_stars.about import show_about_box
 from kcexo.ui.comp_stars.top_pane import TopPanel
@@ -222,8 +223,10 @@ class MainFrame(wx.Frame):
             event.Skip() 
     
     def on_menu_open(self, event):
-        with wx.FileDialog(self, "Open FIST image file", wildcard="FIST files (*.fits)|*.fits",
-                       style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as file_dialog:
+        with wx.FileDialog(self, 
+                           "Open reduced FITS image file", 
+                           wildcard="FITS file (*.fits;*.fts)|*.fits;*.fts|Compressed FITS (*.fz;*.fits.fz)|*.fz;*.fits.fz)",
+                           style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as file_dialog:
             if file_dialog.ShowModal() == wx.ID_CANCEL:
                 return     # the user changed their mind
 
@@ -231,15 +234,23 @@ class MainFrame(wx.Frame):
             pathname = file_dialog.GetPath()
             try:
                 with wx.BusyCursor():
-                    hdu = fits.open(pathname)
-                    hdr = hdu[0].header
-                    if 'OBJECT' not in hdr:
-                        raise ValueError("Cannot process FITS files without OBJECT tag at the moment")
-                    self.target_name = hdr['OBJECT']
-                    target_c = SkyCoord.from_name(self.target_name)
-                    if target_c is None:
+                    hdr, self.image_data, _ = get_image_and_header(pathname)
+                    if hdr is None or self.image_data is None:
+                        wx.MessageBox("The FITS file did not have an image section that this program recognises.", "Doh!", wx.ICON_ERROR | wx.OK)
+                        return
+                    
+                    self.target_name = hdr.get('OBJECT', '')
+                    target_c = ''
+                    if self.target_name:
+                        target_c = SkyCoord.from_name(self.target_name)
+                    if target_c is None or not target_c:
+                        target_c = ''
                         if 'OBJCTRA' in hdr and 'OBJCTDEC' in hdr:
                             target_c = SkyCoord(f"{hdr['OBJCTRA']} {hdr['OBJCTDEC']}", unit=(u.hourangle, u.deg))
+                        elif 'RA' in hdr and 'DEC' in hdr:
+                            target_c = SkyCoord(f"{hdr['RA']} {hdr['DEC']}", unit=(u.deg, u.deg))
+                        else:
+                            wx.MessageBox("Cannot process FITS files without OBJECT or OBJCTRA/DEC tags.", "Really?", wx.ICON_ERROR | wx.OK)
                     
                     self.fov = FOV.from_image(pathname)
                     self.fov_stars = FOVStars(self.fov, self.target_name, target_c)
@@ -254,9 +265,7 @@ class MainFrame(wx.Frame):
                         'R': self.fov_stars.table[0]['R']
                     }
                     self.top_panel.set_filter_target_values(v)
-                    
-                    self.image_data = hdu[0].data
-                    
+                                        
                     self.grid.update_grid(self.filtered_data)
                     self.set_initial_stretch()
                     self.plot_data()
