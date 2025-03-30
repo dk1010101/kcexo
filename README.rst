@@ -1,3 +1,8 @@
+.. image:: kcexo/assets/kcexo_001.png
+  :width: 300
+  :alt: KCEXO
+  :align: right
+
 Collection of exoplanet-related classes and operations
 ======================================================
 
@@ -18,7 +23,8 @@ longer-term and one that is used for more short term (day-before) planning. As a
 output from the long-term planner:
 
 .. image:: kcexo/assets/example_plan_graph.png
-  :width: 600
+  :width: 400
+  :align: center
   :alt: Example of the comparator star finder tool in action
 
 the intent is for the above to become a report that can be used within the tool but also outside.
@@ -32,6 +38,7 @@ and then by highlighting all variable and non-variable stars in the field of vie
 
 .. image:: kcexo/assets/comp_stars/example.png
   :width: 600
+  :align: center
   :alt: Example of the comparator star finder tool in action
 
 The comparator tools expects to be given a good, reduced, science frame that will be used to
