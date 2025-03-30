@@ -10,20 +10,37 @@ At the moment, there are two main components:
        and find decent comparator stars. Finding decent comparator stars is not guaranteed...
 
 
-Using the comparator tool
--------------------------
+Using the comparator star finding tool
+--------------------------------------
+
+Selecting good comparator stars is a tricky process and using SIMBAD etc is a pain. This
+tool helps with this process by allowing the actual (reduced) science images to be opened
+and then by highlighting all variable and non-variable stars in the field of view. For example:
+
+.. image:: kcexo/assets/comp_stars/example.png
+  :width: 600
+  :alt: Example of the comparator star finder tool in action
 
 The comparator tools expects to be given a good, reduced, science frame that will be used to
 determine instrument's field of view. This FOV is then used to query SIMBAD for all stars in
 the field (up to some fixed magnitude which is arbitrarily set to 16). The stars then have their
-colour calculated and are then plotted on the science image while all the details are presented
-in a table. The image can be zoomed, translated, flipped or mirrored and stretched in various 
+colour calculated and are plotted on the science image while all the details are presented
+in a table underneath. The image can be zoomed, translated, flipped or mirrored and stretched in various 
 ways to help you locate the stars on whatever other tool you may be using (HOPS, we hope). If you 
 really want, you can also export the star table to CSV.
 
-Note that all stars are returned and that known variable stars are highlighted in yellow. This
-is so that you can be sure NOT to choose them as comparators. Of course, all stars are variable
-stars but that is a conversation for some other time...
+Note that all stars in the field are returned and that this includes variable stars (which are highlighted
+in yellow on the science image). This is so that you can be sure NOT to choose them as comparators. 
+Of course, all stars are variable but that is a conversation for some other time...
+
+As a reminder, when selecting the "best" comparator stars you should select stars that are:
+    * not variable (ie not highlighted in yellow),
+    * close to the target star,
+    * have similar colour to the target star so their B-V value that is similar to the target's,
+    * have similar magnitude to the target star (ideally in the band you are using but good luck with that if you are using r, cR or beyond),
+    * are not saturated, so be careful of stars that are brighter than the target.
+
+Good Luck!
 
 To run the tool just install the library::
 
@@ -41,7 +58,8 @@ Debt
 ----
 
 This collection is based on work by many other people. Some of the code was directly lifted from
-Angelos Tsiaras's HOPS package and we are eternally grateful to him for writing this code. We also used
+Angelos Tsiaras's HOPS package (https://github.com/ExoWorldsSpies/hops). Angelos is a star and we are eternally grateful 
+to him for writing this code. We also used
 
     * `astropy`
     * `astroplan`

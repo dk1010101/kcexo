@@ -252,6 +252,10 @@ class MainFrame(wx.Frame):
                     self.target_name = hdr.get('OBJECT', '')
                     target_c = ''
                     if self.target_name:
+                        if "_" in self.target_name:
+                            # some observatories add user name after the object name. this is evil.
+                            a, _ = self.target_name.split("_", 1)
+                            self.target_name = a
                         target_c = SkyCoord.from_name(self.target_name)
                     if target_c is None or not target_c:
                         target_c = ''
