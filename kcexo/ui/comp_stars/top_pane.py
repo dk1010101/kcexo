@@ -282,7 +282,7 @@ class TopPanel(wx.Panel):
         
         ############################################
         ### row 2 - blank
-        no_vars_sizer = wx.GridBagSizer(5, 2)
+        no_vars_sizer = wx.GridBagSizer(5, 4)
         
         ############################
         ### row 2.1.0 - blank
@@ -290,7 +290,7 @@ class TopPanel(wx.Panel):
         
         ############################
         ### row 2.1.1 - title
-        label_title = wx.StaticText(panel, wx.ID_ANY, "Star Types")
+        label_title = wx.StaticText(panel, wx.ID_ANY, "Include Star Types")
         no_vars_sizer.Add(label_title, (0, 1), (1, 4), flag=wx.EXPAND)
         
         ############################
@@ -298,7 +298,7 @@ class TopPanel(wx.Panel):
         no_vars_sizer.Add((3, 0), (1, 0), flag=wx.EXPAND)
         no_vars_sizer.Add((41, 0), (1, 1), flag=wx.EXPAND)
 
-        self.cb_show_var_stars = wx.CheckBox(panel, wx.ID_ANY, " Show variable stars")
+        self.cb_show_var_stars = wx.CheckBox(panel, wx.ID_ANY, " Variable/multiple/peculiar stars")
         self.cb_show_var_stars.SetValue(True)
         no_vars_sizer.Add(self.cb_show_var_stars, (1, 2), (1, 3), flag=wx.EXPAND)
         
@@ -307,9 +307,19 @@ class TopPanel(wx.Panel):
         no_vars_sizer.Add((3, 0), (2, 0), flag=wx.EXPAND)
         no_vars_sizer.Add((41, 0), (2, 1), flag=wx.EXPAND)
 
-        self.cb_show_pm_stars = wx.CheckBox(panel, wx.ID_ANY, " Show PM stars")
+        self.cb_show_pm_stars = wx.CheckBox(panel, wx.ID_ANY, " High proper motion stars")
         self.cb_show_pm_stars.SetValue(True)
         no_vars_sizer.Add(self.cb_show_pm_stars, (2, 2), (1, 3), flag=wx.EXPAND)
+        
+        ############################
+        ### row 2.4 - checkbox
+        no_vars_sizer.Add((3, 0), (3, 0), flag=wx.EXPAND)
+        no_vars_sizer.Add((41, 0), (3, 1), flag=wx.EXPAND)
+
+        self.cb_show_hv_stars = wx.CheckBox(panel, wx.ID_ANY, " High velocity stars")
+        self.cb_show_hv_stars.SetValue(True)
+        no_vars_sizer.Add(self.cb_show_hv_stars, (3, 2), (1, 3), flag=wx.EXPAND)
+        
         
         filters_sizer.Add(no_vars_sizer, 0, 0, 0)
         
@@ -332,6 +342,7 @@ class TopPanel(wx.Panel):
         self.flt_r.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.cb_show_pm_stars.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.cb_show_var_stars.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.cb_show_hv_stars.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
     
         #####
         # add to enable/disable list
@@ -491,6 +502,6 @@ class TopPanel(wx.Panel):
         }
         return r
 
-    def get_star_types(self) -> Tuple[bool, bool]:
+    def get_star_types(self) -> Tuple[bool, bool, bool]:
         """Check the state of various star-type show/no-show check boxes"""
-        return self.cb_show_var_stars.GetValue(), self.cb_show_pm_stars.GetValue()
+        return self.cb_show_var_stars.GetValue(), self.cb_show_pm_stars.GetValue(), self.cb_show_hv_stars.GetValue()

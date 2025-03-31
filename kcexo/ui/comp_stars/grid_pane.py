@@ -16,6 +16,7 @@ class GridPanel(wx.Panel):
                  pos=wx.DefaultPosition, size=wx.DefaultSize, 
                  name='topPanel'):
         super().__init__(parent=parent, id=id, pos=pos, size=size, name=name)
+        self.prev_rowcol = [None, None]
         self.data: Table
         
         self.controls_collection = []
@@ -67,6 +68,7 @@ class GridPanel(wx.Panel):
         ########
         # events
         # self.grid_data.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.on_grid_data_select)
+        self.grid_data.GetGridColLabelWindow().Bind(wx.EVT_MOTION, self.on_grid_motion)
     
     def resize_grid(self) -> None:
         """Resize the grid to match the data that we have."""
@@ -110,3 +112,49 @@ class GridPanel(wx.Panel):
     
     def select_row(self, pos: int) -> None:
         self.grid_data.SelectRow(pos)
+    
+    def on_grid_motion(self, evt):
+        """Show tooltips"""
+        # evt.GetRow() and evt.GetCol() would be nice to have here,
+        # but as this is a mouse event, not a grid event, they are not
+        # available and we need to compute them by hand.
+        x, y = self.grid_data.CalcUnscrolledPosition(evt.GetPosition())
+        row = self.grid_data.YToRow(y)
+        col = self.grid_data.XToCol(x)
+
+        if (row,col) != self.prev_rowcol and row >= 0 and col >= 0:
+            self.prev_rowcol[:] = [row,col]
+            hinttext = self.grid_tooltip_get(row, col)
+            if hinttext is None:
+                hinttext = ''
+            self.grid_data.GetGridColLabelWindow().SetToolTip(hinttext)
+        evt.Skip()
+    
+    def grid_tooltip_get(self, row, col) -> str:
+        """Show tooltips"""
+        if col == 4:
+            return """
+SIMBAD star type
+
+There are many star types including:
+  Ma* - massive stars (bC*, sg*, s*r, s*y, s*b, WR*, N*, Psr ...)
+  Y*  - young stars (Or*, TT*, Ae*, HH ...)
+  MS* - main seq stars (Be*, BS*, SX, gD*, dS* ...)
+  Ev* - evolved stars (RG*, HS*, HB*, RR*, WV*, Ce*, cC*
+             C*, S*, LP*, AB*, Mi*, OH*, pA*, RV*, PN, WD...)
+  Pe* - Chemically peculiar stars (a2*, RC* ...)
+  ** - multiple stars (EB*, El*, SB*, RS*, BY*, Sy*, XB*, CV*, No* ...)
+  EM* - emission line stars
+  SN* - supernovae
+  LM* - low mass stars inc brown dwarfs (BD*)
+  Pl  - planets
+  V*  - variable stars (Ir*,  Er*, Ro*, Pu* ...)
+  PM* - high proper motion stars
+  HV* - high velocity stars
+
+etc. Generally speaking they are all variable to some extent so
+just stick to * for comparators although PM* and HV* may not be
+variable (but they could be...).
+
+Google 'SIMBAD otypes' and enjoy!
+"""

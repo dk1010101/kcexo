@@ -384,14 +384,18 @@ class MainFrame(wx.Frame):
         filters = []
         
         # this is tricky as we need to filter first of PM and then for var
-        inc_var_stars, inc_pm_stars = self.top_panel.get_star_types()
+        inc_var_stars, inc_pm_stars, inc_hv_stars = self.top_panel.get_star_types()
         if not inc_var_stars:
             filters.append(FilterIsValue('otype', '*', False))
             if inc_pm_stars:
                 filters.append(FilterOrIsValue('otype', 'PM*'))
+            if inc_hv_stars:
+                filters.append(FilterOrIsValue('otype', 'HV*'))
         else:
             if not inc_pm_stars:
                 filters.append(FilterNotValue('otype', 'PM*', False))
+            if not inc_pm_stars:
+                filters.append(FilterNotValue('otype', 'HV*', False))
     
         # now we can to the rest
         state = self.top_panel.get_filters_states()
