@@ -222,19 +222,20 @@ class TopPanel(wx.Panel):
         
         return panel
 
-
     def create_filter_panel(self, parent: wx.Panel, bg_col: wx.Colour) -> wx.Panel:
         """Create the panel that will be on the right of the top pane and will be used to get filtering properties."""
         panel = wx.Panel(parent, -1)
         panel.SetBackgroundColour(bg_col)  # should be bg_col
         
         # this will allow us to have the filters at the top and not have then stretch
-        panel_sizer = wx.FlexGridSizer(2, 1, 0, 0)
+        panel_sizer = wx.FlexGridSizer(3, 1, 0, 0)
                 
         filters_sizer = wx.BoxSizer(orient=wx.VERTICAL)
         filters_sizer.Add(250, 0, 0) # set the width
         ############################################
-        ### row 1 - Distance - title
+        
+        ############################
+        ### row 1.1 - Distance
                 
         self.flt_dist = ValFilter(panel, wx.ID_ANY, 
                                   "Distance", has_nan=False, 
@@ -243,43 +244,77 @@ class TopPanel(wx.Panel):
                                   titles=["Target\nValues", "Use", " Inc\nNaN"])
         filters_sizer.Add(self.flt_dist, 0, wx.EXPAND, 0)
         
-        ### row 2 - blank
+        ### row 1.2 - blank
         filters_sizer.Add((0, 5), 0, 0, 0)
         
-        ############################################
-        ### row 3 - B-V - title
+        ############################
+        ### row 1.3 - B-V
         
         self.flt_bv = ValFilter(panel, wx.ID_ANY, "B-V", has_nan=True, colour=bg_col)
         filters_sizer.Add(self.flt_bv, 0, wx.EXPAND, 0)
         
-        ### row 4 - blank
+        ### row 1.4 - blank
         filters_sizer.Add((0, 5), 0, 0, 0)
         
-        ############################################
-        ### row 5 - B - title
+        ############################
+        ### row 1.5 - B
         
         self.flt_b = ValFilter(panel, wx.ID_ANY, "B", has_nan=True, colour=bg_col)
         filters_sizer.Add(self.flt_b, 0, wx.EXPAND, 0)
         
-        ### row 6 - blank
+        ### row 1.6 - blank
         filters_sizer.Add((0, 5), 0, 0, 0)
 
-        ############################################
-        ### row 7 - V - title
+        ############################
+        ### row 1.7 - V
         
         self.flt_v = ValFilter(panel, wx.ID_ANY, "V", has_nan=True, colour=bg_col)
         filters_sizer.Add(self.flt_v, 0, wx.EXPAND, 0)
         
-        ### row 8 - blank
+        ### row 1.8 - blank
         filters_sizer.Add((0, 5), 0, 0, 0)
 
-        ############################################
-        ### row 9 - R - title
+        ############################
+        ### row 1.9 - R
         
         self.flt_r = ValFilter(panel, wx.ID_ANY, "R", has_nan=True, colour=bg_col)
         filters_sizer.Add(self.flt_r, 0, wx.EXPAND, 0)
         
-        ### row 10 - blank
+        ############################################
+        ### row 2 - blank
+        no_vars_sizer = wx.GridBagSizer(5, 2)
+        
+        ############################
+        ### row 2.1.0 - blank
+        no_vars_sizer.Add((3, 0), (0, 0), flag=wx.EXPAND)
+        
+        ############################
+        ### row 2.1.1 - title
+        label_title = wx.StaticText(panel, wx.ID_ANY, "Star Types")
+        no_vars_sizer.Add(label_title, (0, 1), (1, 4), flag=wx.EXPAND)
+        
+        ############################
+        ### row 2.2 - check box
+        no_vars_sizer.Add((3, 0), (1, 0), flag=wx.EXPAND)
+        no_vars_sizer.Add((41, 0), (1, 1), flag=wx.EXPAND)
+
+        self.cb_show_var_stars = wx.CheckBox(panel, wx.ID_ANY, " Show variable stars")
+        self.cb_show_var_stars.SetValue(True)
+        no_vars_sizer.Add(self.cb_show_var_stars, (1, 2), (1, 3), flag=wx.EXPAND)
+        
+        ############################
+        ### row 2.3 - checkbox
+        no_vars_sizer.Add((3, 0), (2, 0), flag=wx.EXPAND)
+        no_vars_sizer.Add((41, 0), (2, 1), flag=wx.EXPAND)
+
+        self.cb_show_pm_stars = wx.CheckBox(panel, wx.ID_ANY, " Show PM stars")
+        self.cb_show_pm_stars.SetValue(True)
+        no_vars_sizer.Add(self.cb_show_pm_stars, (2, 2), (1, 3), flag=wx.EXPAND)
+        
+        filters_sizer.Add(no_vars_sizer, 0, 0, 0)
+        
+        ############################################
+        ### row 3 - blank
         filters_sizer.Add((0, 5), 0, 0, 0)
         
         ############################################
@@ -295,6 +330,8 @@ class TopPanel(wx.Panel):
         self.flt_b.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.flt_v.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.flt_r.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.cb_show_pm_stars.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.cb_show_var_stars.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
     
         #####
         # add to enable/disable list
@@ -304,6 +341,8 @@ class TopPanel(wx.Panel):
         self.controls_collection.append(self.flt_b)
         self.controls_collection.append(self.flt_v)
         self.controls_collection.append(self.flt_r)
+        self.controls_collection.append(self.cb_show_var_stars)
+        self.controls_collection.append(self.cb_show_pm_stars)
         
         panel.SetSizerAndFit(panel_sizer)
         
@@ -451,3 +490,7 @@ class TopPanel(wx.Panel):
             'R': (self.flt_r.GetValue(), self.flt_r.GetValues()),
         }
         return r
+
+    def get_star_types(self) -> Tuple[bool, bool]:
+        """Check the state of various star-type show/no-show check boxes"""
+        return self.cb_show_var_stars.GetValue(), self.cb_show_pm_stars.GetValue()

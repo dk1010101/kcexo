@@ -20,7 +20,7 @@ import wx
 import wx.grid
 
 from kcexo.fov import FOV
-from kcexo.data.fov_stars import FOVStars, MinMaxValue
+from kcexo.data.fov_stars import FOVStars, FilterMinMaxValue, FilterNotValue, FilterIsValue, FilterOrIsValue
 from kcexo.data.fits import get_image_and_header
 
 from kcexo.ui.comp_stars.about import show_about_box
@@ -382,12 +382,25 @@ class MainFrame(wx.Frame):
     def filter_data(self) -> None:
         """Based on filter ui components, filter the data and show it."""
         filters = []
-        state = self.top_panel.get_filters_states()
-        for filter in ['dist', 'B-V', 'B', 'V', 'R']:
-            if state[filter][0]:
-                v = state[filter][1]
-                filters.append(MinMaxValue(filter, v[0], v[1], v[2]))
         
+        # this is tricky as we need to filter first of PM and then for var
+        inc_var_stars, inc_pm_stars = self.top_panel.get_star_types()
+        if not inc_var_stars:
+            filters.append(FilterIsValue('otype', '*', False))
+            if inc_pm_stars:
+                filters.append(FilterOrIsValue('otype', 'PM*'))
+        else:
+            if not inc_pm_stars:
+                filters.append(FilterNotValue('otype', 'PM*', False))
+    
+        # now we can to the rest
+        state = self.top_panel.get_filters_states()
+        for flt in ['dist', 'B-V', 'B', 'V', 'R']:
+            if state[flt][0]:
+                v = state[flt][1]
+                filters.append(FilterMinMaxValue(flt, v[0], v[1], v[2]))
+    
+        # and now do the filtering            
         self.filtered_data = self.fov_stars.filter_stars(filters)
     
         self.grid.update_grid(self.filtered_data)

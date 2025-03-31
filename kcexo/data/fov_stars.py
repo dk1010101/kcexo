@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # cspell:ignore ICRS TICID otype vartyp oidref vmax vmin magtyp
-
-from typing import NamedTuple, List
+from dataclasses import dataclass
+from typing import NamedTuple, List, Any
 
 import numpy as np
 
@@ -13,12 +13,38 @@ import pyvo as vo
 from kcexo.fov import FOV
 
 
-class MinMaxValue(NamedTuple):
+@dataclass
+class GenericFilter():
+    pass
+
+
+@dataclass
+class FilterMinMaxValue(GenericFilter):
     var_name: str
     min_value: float
     max_value: float
     allow_nan: bool
 
+
+@dataclass
+class FilterNotValue(GenericFilter):
+    var_name: str
+    not_value: Any
+    allow_nan: bool
+    
+
+@dataclass
+class FilterIsValue(GenericFilter):
+    var_name: str
+    value: Any
+    allow_nan: bool
+
+    
+@dataclass
+class FilterOrIsValue(GenericFilter):
+    var_name: str
+    value: Any
+    
 
 class FOVStars():
     
@@ -80,7 +106,7 @@ ORDER BY dist, "B-V", RA, DEC
         simjob.wait()
         self.table = simjob.fetch_result().to_table()
 
-    def filter_stars(self, filter_spec: List[MinMaxValue]) -> Table:
+    def filter_stars(self, filter_spec: List[GenericFilter]) -> Table:
         """Give a list of min-max filter specifications, return the table with the matching data.
 
         Args:
@@ -91,13 +117,31 @@ ORDER BY dist, "B-V", RA, DEC
         """
         fvs = [True] * len(self.table)
         main_star = self.table['dist'] == 0.0
-        all_f = [False] * len(self.table)
+        all_false = [False] * len(self.table)
         for f in filter_spec:
-            f1 = self.table[f.var_name] >= f.min_value
-            f2 = self.table[f.var_name] <= f.max_value
-            if f.allow_nan:
-                f3 = np.isnan(self.table[f.var_name])
-            else:
-                f3 = all_f
-            fvs = fvs & ((f1 & f2) | f3)
+            if isinstance(f, FilterMinMaxValue):
+                f1 = self.table[f.var_name] >= f.min_value
+                f2 = self.table[f.var_name] <= f.max_value
+                if f.allow_nan:
+                    f3 = np.isnan(self.table[f.var_name])
+                else:
+                    f3 = all_false
+                fvs = fvs & ((f1 & f2) | f3)
+            elif isinstance(f, FilterNotValue):
+                f1 = self.table[f.var_name] != f.not_value
+                if f.allow_nan:
+                    f3 = np.isnan(self.table[f.var_name])
+                else:
+                    f3 = all_false
+                fvs = fvs & (f1 | f3)
+            elif isinstance(f, FilterIsValue):
+                f1 = self.table[f.var_name] == f.value
+                if f.allow_nan:
+                    f3 = np.isnan(self.table[f.var_name])
+                else:
+                    f3 = all_false
+                fvs = fvs & (f1 | f3)
+            elif isinstance(f, FilterOrIsValue):
+                f1 = self.table[f.var_name] == f.value
+                fvs = fvs | f1
         return self.table[main_star | fvs]
