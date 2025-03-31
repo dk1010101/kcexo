@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 from typing import Tuple, Any
 
+import numpy as np
+
 import wx
 
 from astropy.visualization import SqrtStretch, LogStretch, AsinhStretch, ZScaleInterval, SquaredStretch, MinMaxInterval, SinhStretch, LinearStretch
@@ -8,7 +10,7 @@ from astropy.visualization import SqrtStretch, LogStretch, AsinhStretch, ZScaleI
 from kcexo.ui.widgets.new_event import new_command_event
 from kcexo.ui.widgets.range_slider import RangeSlider
 from kcexo.ui.widgets.filter_control import ValFilter
-from kcexo.ui.widgets.mpl_canvas import MatplotlibPanel
+from kcexo.ui.widgets.mpl_canvas import MatplotlibPanel, EV_MOUSE_MOTION
 
 
 FilterChangeEvent, EV_FILTER_CHANGE = new_command_event()
@@ -46,8 +48,10 @@ class TopPanel(wx.Panel):
         self.cb_flip_y: wx.ComboBox = None
         self.bt_image_reset: wx.Button = None
         self.flt_dist: ValFilter = None
+        self.flt_gaia: ValFilter = None
         self.flt_bv: ValFilter = None
-        self.flt_b: ValFilter = None
+        self.flt_g: ValFilter = None
+        # self.flt_b: ValFilter = None
         self.flt_v: ValFilter = None
         self.flt_r: ValFilter = None
         
@@ -82,7 +86,7 @@ class TopPanel(wx.Panel):
         self.SetSizer(panel_sizer)
         panel_sizer.Fit(self)
         self.Layout()
-        
+                
         self.controls_collection.append(self.canvas_panel)
      
     def create_image_manipulation_panel(self, parent: wx.Panel, bg_col: wx.Colour) -> wx.Panel:
@@ -248,40 +252,58 @@ class TopPanel(wx.Panel):
         filters_sizer.Add((0, 5), 0, 0, 0)
         
         ############################
-        ### row 1.3 - B-V
+        ### row 1.3 - Gaia Colour
         
-        self.flt_bv = ValFilter(panel, wx.ID_ANY, "B-V", has_nan=True, colour=bg_col)
-        filters_sizer.Add(self.flt_bv, 0, wx.EXPAND, 0)
+        self.flt_gaia = ValFilter(panel, wx.ID_ANY, "Gbp-Grp", has_nan=True, colour=bg_col)
+        filters_sizer.Add(self.flt_gaia, 0, wx.EXPAND, 0)
         
         ### row 1.4 - blank
         filters_sizer.Add((0, 5), 0, 0, 0)
         
         ############################
-        ### row 1.5 - B
+        ### row 1.5 - B-V Colour
         
-        self.flt_b = ValFilter(panel, wx.ID_ANY, "B", has_nan=True, colour=bg_col)
-        filters_sizer.Add(self.flt_b, 0, wx.EXPAND, 0)
+        self.flt_bv = ValFilter(panel, wx.ID_ANY, "B-V", has_nan=True, colour=bg_col)
+        filters_sizer.Add(self.flt_bv, 0, wx.EXPAND, 0)
         
         ### row 1.6 - blank
         filters_sizer.Add((0, 5), 0, 0, 0)
-
-        ############################
-        ### row 1.7 - V
         
-        self.flt_v = ValFilter(panel, wx.ID_ANY, "V", has_nan=True, colour=bg_col)
-        filters_sizer.Add(self.flt_v, 0, wx.EXPAND, 0)
+        ############################
+        ### row 1.7 - B
+        
+        #self.flt_b = ValFilter(panel, wx.ID_ANY, "B", has_nan=True, colour=bg_col)
+        #filters_sizer.Add(self.flt_b, 0, wx.EXPAND, 0)
+        
+        ### row 1.8 - blank
+        #filters_sizer.Add((0, 5), 0, 0, 0)
+        
+        self.flt_g = ValFilter(panel, wx.ID_ANY, "G", has_nan=True, colour=bg_col)
+        filters_sizer.Add(self.flt_g, 0, wx.EXPAND, 0)
         
         ### row 1.8 - blank
         filters_sizer.Add((0, 5), 0, 0, 0)
 
         ############################
-        ### row 1.9 - R
+        ### row 1.9 - V
+        
+        self.flt_v = ValFilter(panel, wx.ID_ANY, "V", has_nan=True, colour=bg_col)
+        filters_sizer.Add(self.flt_v, 0, wx.EXPAND, 0)
+        
+        ### row 1.10 - blank
+        filters_sizer.Add((0, 5), 0, 0, 0)
+
+        ############################
+        ### row 1.11 - R
         
         self.flt_r = ValFilter(panel, wx.ID_ANY, "R", has_nan=True, colour=bg_col)
         filters_sizer.Add(self.flt_r, 0, wx.EXPAND, 0)
         
+        ### row 1.12 - blank
+        filters_sizer.Add((0, 5), 0, 0, 0)
+        
         ############################################
-        ### row 2 - blank
+        ### row 2 - Star Types
         no_vars_sizer = wx.GridBagSizer(5, 4)
         
         ############################
@@ -336,8 +358,10 @@ class TopPanel(wx.Panel):
         ########
         # events        
         self.flt_dist.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.flt_gaia.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.flt_bv.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
-        self.flt_b.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        self.flt_g.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
+        # self.flt_b.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.flt_v.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.flt_r.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
         self.cb_show_pm_stars.Bind(wx.EVT_CHECKBOX, self.on_cb_filter_change)
@@ -348,8 +372,10 @@ class TopPanel(wx.Panel):
         # add to enable/disable list
         
         self.controls_collection.append(self.flt_dist)
+        self.controls_collection.append(self.flt_gaia)
         self.controls_collection.append(self.flt_bv)
-        self.controls_collection.append(self.flt_b)
+        self.controls_collection.append(self.flt_g)
+        # self.controls_collection.append(self.flt_b)
         self.controls_collection.append(self.flt_v)
         self.controls_collection.append(self.flt_r)
         self.controls_collection.append(self.cb_show_var_stars)
@@ -362,16 +388,20 @@ class TopPanel(wx.Panel):
     def set_filter_target_values(self, target_vals: dict) -> None:
         """Give a dictionary of values, set the filter target values."""
         self.flt_dist.SetTargetValue(target_vals['dist'])
+        self.flt_gaia.SetTargetValue(target_vals['Gbp-Grp'])
         self.flt_bv.SetTargetValue(target_vals['B-V'])
-        self.flt_b.SetTargetValue(target_vals['B'])
+        self.flt_g.SetTargetValue(target_vals['G'])
+        # self.flt_b.SetTargetValue(target_vals['B'])
         self.flt_v.SetTargetValue(target_vals['V'])
         self.flt_r.SetTargetValue(target_vals['R'])
     
     def set_filter_minmax(self, minmax_vals: dict) -> None:
         """Give a dictionary of values, set the filter min-max values."""
         self.flt_dist.SetMinMax(*minmax_vals['dist'])
+        self.flt_gaia.SetMinMax(*minmax_vals['Gbp-Grp'])
         self.flt_bv.SetMinMax(*minmax_vals['B-V'])
-        self.flt_b.SetMinMax(*minmax_vals['B'])
+        self.flt_g.SetMinMax(*minmax_vals['G'])
+        # self.flt_b.SetMinMax(*minmax_vals['B'])
         self.flt_v.SetMinMax(*minmax_vals['V'])
         self.flt_r.SetMinMax(*minmax_vals['R'])
 
@@ -390,14 +420,14 @@ class TopPanel(wx.Panel):
         ld = vmin - vmin * 0.15
         if ld < l_vmin:
             ld = l_vmin
-        self.txt_stretch_lower_limit.SetValue(str(int(ld)))
-        self.slider_image_stretch.SetMin(int(ld))
+        self.txt_stretch_lower_limit.SetValue(str(int(np.floor(ld))))
+        self.slider_image_stretch.SetMin(int(np.floor(ld)))
         
         ud = vmax * 1.15
         if ud > l_vmax:
             ud = l_vmax
-        self.txt_stretch_upper_limit.SetValue(str(int(ud)))
-        self.slider_image_stretch.SetMax(int(ud))
+        self.txt_stretch_upper_limit.SetValue(str(int(np.ceil(ud))))
+        self.slider_image_stretch.SetMax(int(np.ceil(ud)))
         
         self.slider_image_stretch.SetValues(vmin, vmax)
         self.on_slider_image_stretch(None)
@@ -435,6 +465,7 @@ class TopPanel(wx.Panel):
             event.Skip()
 
     def on_txt_stretch_lower_change(self, event):
+        """Handle users hitting ENTER for the lower extent value for the stretch."""
         vmin, vmax = self.slider_image_stretch.GetValues()
         v = int(self.txt_stretch_lower_limit.GetValue())
         if v < self.stretch_min:
@@ -447,9 +478,11 @@ class TopPanel(wx.Panel):
             event.Skip()
     
     def on_txt_stretch_lower_lost_focus(self, event):
+        """Handle users clicking away from the control for the lower extent value for the stretch."""
         self.on_txt_stretch_lower_change(event)
     
     def on_txt_stretch_upper_change(self, event):
+        """Handle users hitting ENTER for the upper extent value for the stretch."""
         vmin, vmax = self.slider_image_stretch.GetValues()
         v = int(self.txt_stretch_upper_limit.GetValue())
         if v > self.stretch_max:
@@ -462,7 +495,12 @@ class TopPanel(wx.Panel):
             event.Skip()
 
     def on_txt_stretch_upper_lost_focus(self, event):
+        """Handle users clicking away from the control for the upper extent value for the stretch."""
         self.on_txt_stretch_upper_change(event)
+
+    def on_canvas_motion(self, event):
+        print(event.xdata, event.ydata)
+
 
     def get_stretch_min_max(self) -> Tuple[int, int]:
         """Get current min/max from the stretch slider"""
@@ -495,8 +533,10 @@ class TopPanel(wx.Panel):
         """Get the state of all the filters."""
         r = {
             'dist': (self.flt_dist.GetValue(), self.flt_dist.GetValues()),
+            'Gbp-Grp': (self.flt_gaia.GetValue(), self.flt_gaia.GetValues()),
             'B-V': (self.flt_bv.GetValue(), self.flt_bv.GetValues()),
-            'B': (self.flt_b.GetValue(), self.flt_b.GetValues()),
+            'G': (self.flt_g.GetValue(), self.flt_g.GetValues()),
+             # 'B': (self.flt_b.GetValue(), self.flt_b.GetValues()),
             'V': (self.flt_v.GetValue(), self.flt_v.GetValues()),
             'R': (self.flt_r.GetValue(), self.flt_r.GetValues()),
         }
@@ -505,3 +545,18 @@ class TopPanel(wx.Panel):
     def get_star_types(self) -> Tuple[bool, bool, bool]:
         """Check the state of various star-type show/no-show check boxes"""
         return self.cb_show_var_stars.GetValue(), self.cb_show_pm_stars.GetValue(), self.cb_show_hv_stars.GetValue()
+
+    def reset(self) -> None:
+        """Reset things back to blank"""
+        # canvas?
+        self.slider_image_stretch.ResetMinMax(0, 1)
+        self.cb_flip_x.SetValue(False)
+        self.cb_flip_y.SetValue(False)
+        self.flt_dist.reset()
+        self.flt_gaia.reset()
+        self.flt_bv.reset()
+        self.flt_g.reset()
+        # self.flt_b.reset()
+        self.flt_v.reset()
+        self.flt_r.reset()        
+        self.Disable()

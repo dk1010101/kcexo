@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cSpell:ignore hmsdms OBJCTRA OBJCTDEC xlim ylim yrange kcexo
+# cSpell:ignore hmsdms OBJCTRA OBJCTDEC xlim ylim yrange kcexo otype
 # pylint:disable=unused-argument
 import os
 import copy
@@ -24,7 +24,7 @@ from kcexo.data.fov_stars import FOVStars, FilterMinMaxValue, FilterNotValue, Fi
 from kcexo.data.fits import get_image_and_header
 
 from kcexo.ui.comp_stars.about import show_about_box
-from kcexo.ui.comp_stars.top_pane import TopPanel, EV_FILTER_CHANGE, EV_FILTER_IMG_X_FLIP, EV_FILTER_IMG_Y_FLIP, EV_FILTER_IMG_STRETCH, EV_FILTER_IMG_STRETCH_RESET, EV_FILTER_IMG_RESET
+from kcexo.ui.comp_stars.top_pane import TopPanel, EV_FILTER_CHANGE, EV_FILTER_IMG_X_FLIP, EV_FILTER_IMG_Y_FLIP, EV_FILTER_IMG_STRETCH, EV_FILTER_IMG_STRETCH_RESET, EV_FILTER_IMG_RESET, EV_MOUSE_MOTION
 from kcexo.ui.comp_stars.grid_pane import GridPanel
 from kcexo.ui.widgets.license_dialog import LicenseViewerDialog
 
@@ -59,6 +59,12 @@ class MainFrame(wx.Frame):
         ############################################
         # Menu Bar
         self.create_menu_bar()
+        
+        ###########################################
+        # Status Bar
+        self.sb = self.CreateStatusBar(2)
+        self.sb.SetStatusWidths([-1, 200])
+        self.clear_status_bar()
         
         ############################################
         # Main Panel
@@ -108,7 +114,7 @@ class MainFrame(wx.Frame):
         #################
         self.disable_all_controls()
         self.main_panel.SetSizerAndFit(sizer_1)
-        
+               
         ###########################################
         
         self.Layout()
@@ -126,6 +132,7 @@ class MainFrame(wx.Frame):
         self.top_panel.Bind(EV_FILTER_IMG_X_FLIP, self.on_cb_flip)
         self.top_panel.Bind(EV_FILTER_IMG_Y_FLIP, self.on_cb_flip)
         self.top_panel.Bind(EV_FILTER_CHANGE, self.on_filter_change)
+        self.top_panel.canvas_panel.Bind(EV_MOUSE_MOTION, self.on_canvas_motion)
         self.top_panel.canvas.mpl_connect('pick_event', self.on_canvas_pick)
                 
     def create_menu_bar(self):
@@ -210,11 +217,16 @@ class MainFrame(wx.Frame):
             pathname = file_dialog.GetPath()
             try:
                 with wx.BusyCursor():
+                    self.top_panel.reset()
+                    
+                    self.update_status_bar("Loading image...")
                     hdr, self.image_data = get_image_and_header(pathname)
                     if hdr is None or self.image_data is None:
                         wx.MessageBox("The FITS file did not have an image section that this program recognises.", "Doh!", wx.ICON_ERROR | wx.OK)
+                        self.update_status_bar("Failed to load image.")
                         return
                     
+                    self.update_status_bar("Processing image...")
                     self.target_name = hdr.get('OBJECT', '')
                     target_c = ''
                     if self.target_name:
@@ -232,18 +244,24 @@ class MainFrame(wx.Frame):
                             target_c = SkyCoord(f"{hdr['RA']} {hdr['DEC']}", unit=(u.deg, u.deg))
                         else:
                             wx.MessageBox("Cannot process FITS files without OBJECT or OBJCTRA/DEC tags.", "Really?", wx.ICON_ERROR | wx.OK)
+                            self.update_status_bar("Failed to process image.")
+                            return
                     
+                    self.update_status_bar("Getting matching stars...")
                     self.fov = FOV.from_image(pathname)
                     self.fov_stars = FOVStars(self.fov, self.target_name, target_c)
-                    self.filtered_data = copy.deepcopy(self.fov_stars.table)
+                    self.filtered_data = copy.deepcopy(self.fov_stars.simbad_table)
                     self.fname = pathname
                     
+                    self.update_status_bar("Updating the controls...")
                     v = {
-                        'dist': self.fov_stars.table[0]['dist'],
-                        'B-V': self.fov_stars.table[0]['B-V'],
-                        'B': self.fov_stars.table[0]['B'],
-                        'V': self.fov_stars.table[0]['V'],
-                        'R': self.fov_stars.table[0]['R']
+                        'dist': self.fov_stars.simbad_table[0]['dist'],
+                        'Gbp-Grp': self.fov_stars.simbad_table[0]['Gbp-Grp'],
+                        'B-V': self.fov_stars.simbad_table[0]['B-V'],
+                        'G': self.fov_stars.simbad_table[0]['G'],
+                        # 'B': self.fov_stars.simbad_table[0]['B'],
+                        'V': self.fov_stars.simbad_table[0]['V'],
+                        'R': self.fov_stars.simbad_table[0]['R']
                     }
                     self.top_panel.set_filter_target_values(v)
                                         
@@ -253,27 +271,34 @@ class MainFrame(wx.Frame):
                         self.top_panel.set_initial_stretch(self.image_data)
                         self.plot_data()
                     
-                    min_d = np.min(self.fov_stars.table['dist'])
-                    max_d = np.max(self.fov_stars.table['dist'])
-                    min_bv = np.min(self.fov_stars.table['B-V'])
-                    max_bv = np.max(self.fov_stars.table['B-V'])
-                    min_b = np.min(self.fov_stars.table['B'])
-                    max_b = np.max(self.fov_stars.table['B'])
-                    min_v = np.min(self.fov_stars.table['V'])
-                    max_v = np.max(self.fov_stars.table['V'])
-                    min_r = np.min(self.fov_stars.table['R'])
-                    max_r = np.max(self.fov_stars.table['R'])
+                    min_d = np.nanmin(self.fov_stars.simbad_table['dist'])
+                    max_d = np.nanmax(self.fov_stars.simbad_table['dist'])
+                    min_gaia = np.nanmin(self.fov_stars.simbad_table['Gbp-Grp'])
+                    max_gaia = np.nanmax(self.fov_stars.simbad_table['Gbp-Grp'])
+                    min_bv = np.nanmin(self.fov_stars.simbad_table['B-V'])
+                    max_bv = np.nanmax(self.fov_stars.simbad_table['B-V'])
+                    min_g = np.nanmin(self.fov_stars.simbad_table['G'])
+                    max_g = np.nanmax(self.fov_stars.simbad_table['G'])
+                    # min_b = np.nanmin(self.fov_stars.simbad_table['B'])
+                    # max_b = np.nanmax(self.fov_stars.simbad_table['B'])
+                    min_v = np.nanmin(self.fov_stars.simbad_table['V'])
+                    max_v = np.nanmax(self.fov_stars.simbad_table['V'])
+                    min_r = np.nanmin(self.fov_stars.simbad_table['R'])
+                    max_r = np.nanmax(self.fov_stars.simbad_table['R'])
 
                     v = {
                         'dist': (min_d, max_d),
+                        'Gbp-Grp': (min_gaia, max_gaia),
                         'B-V': (min_bv, max_bv),
-                        'B': (min_b, max_b),
+                        'G': (min_g, max_g),
+                        # 'B': (min_b, max_b),
                         'V': (min_v, max_v),
                         'R': (min_r, max_r)
                     }
                     self.top_panel.set_filter_minmax(v)
                     
                     self.enable_all_controls()
+                    self.clear_status_bar()
                     self.Refresh()
             
             except IOError:
@@ -283,11 +308,13 @@ class MainFrame(wx.Frame):
         """Export the data to file"""
         dlg = wx.FileDialog(self, "Export to CSV:", ".", "", "CSV (*.csv)|*.csv", wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
+            self.update_status_bar("Exporting data...")
             filename = dlg.GetFilename()
             dirname = dlg.GetDirectory()
             fname = os.path.join(dirname, filename)
             as_ascii.write(self.filtered_data, fname, format='csv', fast_writer=False, overwrite=True)
         dlg.Destroy()
+        self.clear_status_bar()
         wx.MessageDialog("Export completed", "Export ok")
     
     def on_menu_help_license(self, event):
@@ -315,6 +342,14 @@ class MainFrame(wx.Frame):
         pos = int(label)
         self.grid.select_row(pos)
 
+    def on_canvas_motion(self, event):
+        """Get the mouse motion and convert in to RA/DEC."""
+        x = event.xdata
+        y = event.ydata
+        c = self.fov.wcs.pixel_to_world(x, y)
+        if c:
+            self.sb.SetStatusText(c.to_string("hmsdms", precision=3), 1)
+
     ##############################################################################
     # state-changers
     
@@ -333,6 +368,9 @@ class MainFrame(wx.Frame):
         
     def plot_data(self) -> None:
         """Plot the starfiled along with the stars."""
+        
+        self.update_status_bar("Plotting data...")
+        
         self.top_panel.figure.clear()
         self.ax = self.top_panel.canvas.add_subplot(1, 1, 1, projection=self.fov.wcs)
         self.ax.set(xlabel="RA", ylabel="Dec")
@@ -368,7 +406,7 @@ class MainFrame(wx.Frame):
                     continue
                 self.ax.text(xy[0]+25, xy[1]+25, f"{i+1}", color=cl, fontsize=6, label=str(i), picker=True)
         # title
-        obj_name = self.fov_stars.table[0]['Object']
+        obj_name = self.fov_stars.simbad_table[0]['Object']
         if obj_name != self.target_name:
             title = f"{self.target_name} ({obj_name})"
         else:
@@ -377,11 +415,14 @@ class MainFrame(wx.Frame):
         self.ax.grid(True) 
         self.top_panel.figure.tight_layout()
         self.top_panel.canvas.draw()
+        
+        self.clear_status_bar()
         self.Refresh()
 
     def filter_data(self) -> None:
         """Based on filter ui components, filter the data and show it."""
         filters = []
+        self.update_status_bar("Filtering data...")
         
         # this is tricky as we need to filter first of PM and then for var
         inc_var_stars, inc_pm_stars, inc_hv_stars = self.top_panel.get_star_types()
@@ -399,7 +440,7 @@ class MainFrame(wx.Frame):
     
         # now we can to the rest
         state = self.top_panel.get_filters_states()
-        for flt in ['dist', 'B-V', 'B', 'V', 'R']:
+        for flt in ['dist', 'Gbp-Grp', 'B-V', 'G', 'V', 'R']:  # B removed
             if state[flt][0]:
                 v = state[flt][1]
                 filters.append(FilterMinMaxValue(flt, v[0], v[1], v[2]))
@@ -411,3 +452,13 @@ class MainFrame(wx.Frame):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
             self.plot_data()
+            
+        self.clear_status_bar()
+
+    def update_status_bar(self, message: str) -> None:
+        """Update the status bar..."""
+        self.sb.SetStatusText(message)
+
+    def clear_status_bar(self) -> None:
+        """clear the status bar"""
+        self.update_status_bar("Ready")

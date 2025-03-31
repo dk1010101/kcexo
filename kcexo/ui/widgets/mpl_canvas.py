@@ -2,6 +2,7 @@
 import warnings
 from typing import Any
 import wx
+import wx.lib.newevent as NE
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -12,6 +13,9 @@ if _USE_AGG :
     from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 else:
     from matplotlib.backends.backend_wx import FigureCanvasWx as FigureCanvas
+
+
+CanvasMotionEvent, EV_MOUSE_MOTION = NE.NewCommandEvent()
 
 
 class MatplotlibCanvas(FigureCanvas):
@@ -100,10 +104,12 @@ class MatplotlibCanvas(FigureCanvas):
         """Handle image click-and-drag event"""
         if self.ax is None:
             return
-        if self.canvas_press is None: 
-            return
         if event.inaxes != self.ax: 
             return
+        if self.canvas_press is None: 
+            wx.PostEvent(self, CanvasMotionEvent(wx.ID_ANY, xdata=event.xdata, ydata=event.ydata))    
+            return
+        
         dx = event.xdata - self.canvas_xpress
         dy = event.ydata - self.canvas_ypress
         self.canvas_cur_xlim -= dx
@@ -115,6 +121,7 @@ class MatplotlibCanvas(FigureCanvas):
             self.ax.set_ylim(self.canvas_cur_ylim)
 
             self.draw()
+        wx.PostEvent(self, CanvasMotionEvent(wx.ID_ANY, xdata=event.xdata, ydata=event.ydata))
 
     def add_subplot(self, *argv, **kwargs) -> Axes:
         """Pass-through for creation of axes and subplots"""

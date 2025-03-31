@@ -1,5 +1,7 @@
 # -*- coding: UTF-8 -*-
-# pylint-disable=unused-argument
+# pylint:disable=unused-argument, invalid-name
+
+import numpy as np
 
 import wx
 
@@ -98,13 +100,16 @@ class ValFilter(wx.Panel):
         self.slider.Bind(wx.EVT_SLIDER, self.on_slider_change)
     
     def on_cb_nan(self, event):
+        """Process use-NaNs check box."""
         if self.cb_use.GetValue():
             self.post_checkbox_event()
             
     def on_cb_val(self, event):
+        """Process Use check box."""
         self.post_checkbox_event()
         
     def on_slider_change(self, event):
+        """Process slider handles movements."""
         low, high = self.slider.GetValues()
         self.lbl_min.SetLabel(f"{low:.{self.num_precision}f}")
         self.lbl_max.SetLabel(f"{high:.{self.num_precision}f}")
@@ -112,26 +117,37 @@ class ValFilter(wx.Panel):
             self.post_checkbox_event()
         
     def Enable(self, enable=True):
+        """Enable all controls."""
         super().Enable(enable)
         self.Refresh()
 
     def Disable(self):
+        """Disable all controls."""
         super().Disable()
         self.Refresh()
         
     def post_checkbox_event(self):
+        """Send the event that the culter has changed."""
         event = wx.PyCommandEvent(wx.EVT_CHECKBOX.typeId, self.parent.GetId())
         event.SetEventObject(self.parent)
         #wx.PostEvent(self.parent.GetEventHandler(), event)
         self.GetEventHandler().ProcessEvent(event)
 
     def GetValue(self):
+        """Return is this control is to be used to create filters."""
         return self.cb_use.GetValue()
 
     def GetValues(self):
+        """Return slider values as well as the state of Use-NaNs check box."""
         return *self.slider.GetValues(), self.cb_nan.GetValue() if self.has_nan else False
     
     def SetMinMax(self, v_min: float, v_max: float, precision=None):
+        """Set the slider min-max extent."""
+        if v_min is None or np.isnan(v_min) or v_max is None or np.isnan(v_max):
+            self.Disable()
+        else:
+            self.Enable()
+            
         if precision is None:
             p = self.num_precision
         else:
@@ -147,18 +163,35 @@ class ValFilter(wx.Panel):
         self.slider.ResetMinMax(v_min, v_max)
     
     def SetCBVal(self, val):
+        """Set Use state."""
         self.cb_use.SetValue(val)
         
     def SetCBNaNVal(self, val):
+        """Set Use-NaNs state."""
         if self.cb_nan is not None:
             self.cb_nan.SetValue(val)
 
     def SetTargetValue(self, val, precision=None):
+        """Set the target's value on the control so that users can easily see what they are working with."""
+        if val is None or np.isnan(val):
+            cmin = self.slider.GetMin()
+            cmax = self.slider.GetMax()
+            if cmin is None or np.isnan(cmin) or cmax is None or np.isnan(cmax):
+                self.Disable()
+        else:
+            self.Enable()
         if precision is None:
             p = self.num_precision
         else:
             p = precision
-        if val or val==0:
+        if (val or val==0) and not np.isnan(val):
             self.lbl_target_value.SetLabel(f"{val:.{p}f}")
         else:
             self.lbl_target_value.SetLabel("--")
+
+    def reset(self) -> None:
+        """Clear the widget and reset to initial state."""
+        self.cb_use.SetValue(False)
+        self.cb_nan.SetValue(False)
+        self.SetMinMax(0, 1)
+        self.SetTargetValue(np.nan)

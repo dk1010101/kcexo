@@ -83,8 +83,9 @@ to him for writing this code. We also used
 
     * `astropy`
     * `astroplan`
-    * `numpy`
+    * `astroquery`
     * `pyvo`
+    * `numpy`
     * `scipy`
     * `matplotlib`
     * `wxpython`

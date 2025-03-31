@@ -21,6 +21,7 @@ dependencies = [
   "matplotlib",
   "astropy",
   "astroplan",
+  "astroquery",
   "wxpython"
 ]
 dynamic = ["version"]
