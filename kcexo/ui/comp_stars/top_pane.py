@@ -30,6 +30,7 @@ class TopPanel(wx.Panel):
         self.stretch_prev_vmin=65535  # some bigish number
         self.stretch_prev_vmax=0
         self.stretch_max = 0
+        self.stretch_min = 65535
 
         self.controls_collection = []
         self.background_colour = background_colour
@@ -90,48 +91,101 @@ class TopPanel(wx.Panel):
         panel = wx.Panel(parent, -1)
         panel.SetBackgroundColour(bg_col)
         
-        panel_sizer = wx.FlexGridSizer(1, 15, 0, 0)
+        panel_sizer = wx.FlexGridSizer(1, 19, 0, 0)
         
-        panel_sizer.Add((15, 15), 0, 0, 0)
+        ############################################
+        # 1 - space
+        panel_sizer.Add((10, 15), 0, 0, 0)
+        
+        # 2 - "Image Stretch" label
         label_13 = wx.StaticText(panel, wx.ID_ANY, "Image Stretch ", style=wx.ALIGN_RIGHT)
         panel_sizer.Add(label_13, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
-        panel_sizer.Add((10, 15), 0, 0, 0)
+        # 3 - space
+        panel_sizer.Add((5, 15), 0, 0, 0)
 
+        # 4 - stretch combo box
         self.cb_image_stretch = wx.ComboBox(panel, wx.ID_ANY, choices=["linear", "log", "sinh", "asinh", "square", "sqrt"], style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SIMPLE)
-        self.cb_image_stretch.SetMinSize((110, 15))
+        self.cb_image_stretch.SetMinSize((60, 25))
         self.cb_image_stretch.SetSelection(2)
-        panel_sizer.Add(self.cb_image_stretch, 0, wx.EXPAND, 0)
+        self.cb_image_stretch.SetToolTip(wx.ToolTip("Algorithm to use to stretch the image"))
+        panel_sizer.Add(self.cb_image_stretch, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
+        # sz = self.cb_image_stretch.GetMinHeight()
 
-        panel_sizer.Add((20, 15), 0, 0, 0)
+        # 5 - space
+        panel_sizer.Add((15, 15), 0, 0, 0)
 
+        # 6 - text box, lower limit
+        self.txt_stretch_lower_limit = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER|wx.TE_RIGHT)
+        self.txt_stretch_lower_limit.SetMinSize((45, -1))
+        self.txt_stretch_lower_limit.SetToolTip(wx.ToolTip("The lower limit of the stretch range\nEnter new value and press enter to change"))
+        panel_sizer.Add(self.txt_stretch_lower_limit, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 0)
+        
+        # 7 - label "/"
+        label_s1 = wx.StaticText(panel, wx.ID_ANY, "/", style=wx.ALIGN_CENTER)
+        panel_sizer.Add(label_s1, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
+
+        # 8 - slider lower value label
         self.lbl_image_stretch_min = wx.StaticText(panel, wx.ID_ANY, "        ", style=wx.ALIGN_RIGHT)
+        self.lbl_image_stretch_min.SetMinSize((35, -1))
+        self.lbl_image_stretch_min.SetToolTip(wx.ToolTip("The lower value used to stretch the image\nChanged by the slider"))
         panel_sizer.Add(self.lbl_image_stretch_min, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
+        # 9 - slider
         self.slider_image_stretch = RangeSlider(panel, lowValue=0, highValue=65535, minValue=0, maxValue=65535)
         self.slider_image_stretch.SetBackgroundColour(bg_col)
-        self.slider_image_stretch.SetMinSize((300, 15))
-        panel_sizer.Add(self.slider_image_stretch, 0, wx.EXPAND, 0)
+        self.slider_image_stretch.SetMinSize((200, 15))
+        panel_sizer.Add(self.slider_image_stretch, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
+        # 10 - slide upper value label
         self.lbl_image_stretch_max = wx.StaticText(panel, wx.ID_ANY, "        ", style=wx.ALIGN_LEFT)
+        self.lbl_image_stretch_max.SetMinSize((35, -1))
+        self.lbl_image_stretch_max.SetToolTip(wx.ToolTip("The upper value used to stretchthe image\nChanged by the slider"))
         panel_sizer.Add(self.lbl_image_stretch_max, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
-        panel_sizer.Add((20, 15), 0, 0, 0)
+        # 11 - label "/"
+        label_s2 = wx.StaticText(panel, wx.ID_ANY, "/", style=wx.ALIGN_CENTER)
+        panel_sizer.Add(label_s2, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
+        # 12 - text box, upper limit
+        self.txt_stretch_upper_limit = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER|wx.TE_LEFT)
+        self.txt_stretch_upper_limit.SetMinSize((45, -1))
+        self.txt_stretch_upper_limit.SetToolTip(wx.ToolTip("The upper limit of the stretch range\nEnter new value and press enter to change"))
+        panel_sizer.Add(self.txt_stretch_upper_limit, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 0)
+        
+        # 13 - space
+        panel_sizer.Add((15, 15), 0, 0, 0)
+
+        # 14 - "Apply" button
         self.bt_image_stretch_apply = wx.Button(panel, wx.ID_ANY, "Apply")
-        panel_sizer.Add(self.bt_image_stretch_apply, 0, 0, 0)
+        self.bt_image_stretch_apply.SetToolTip(wx.ToolTip("Apply the changes to the image\nThis will also reset the zoom"))
+        panel_sizer.Add(self.bt_image_stretch_apply, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        
+        # 15 - "Reset" buttone
         self.bt_image_stretch_reset = wx.Button(panel, wx.ID_ANY, "Reset")
-        panel_sizer.Add(self.bt_image_stretch_reset, 0, 0, 0)
+        self.bt_image_stretch_reset.SetToolTip(wx.ToolTip("Reset stretch to the initial (potential `ideal`) values\nThis will also reset the zoom"))
+        panel_sizer.Add(self.bt_image_stretch_reset, 0, wx.ALIGN_CENTER_VERTICAL, 0)
 
-        panel_sizer.Add((40, 15), 0, 0, 0)
+        # 16 - space
+        panel_sizer.Add((30, 15), 0, 0, 0)
 
+        # 17 - "Flip X" check box
         self.cb_flip_x = wx.CheckBox(panel, wx.ID_ANY, "Flip X")
+        self.cb_flip_x.SetToolTip(wx.ToolTip("Mirror the image"))
         panel_sizer.Add(self.cb_flip_x, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
+        
+        # 18 - "Flip Y" check box
         self.cb_flip_y = wx.CheckBox(panel, wx.ID_ANY, "Flip Y")
+        self.cb_flip_y.SetToolTip(wx.ToolTip("Flip the image"))
         panel_sizer.Add(self.cb_flip_y, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
+        # 19 - "Reset Zoom" button
         self.bt_image_reset = wx.Button(panel, wx.ID_ANY, "Reset Zoom")
-        panel_sizer.Add(self.bt_image_reset, 0, 0, 0)
+        self.bt_image_reset.SetToolTip(wx.ToolTip("Reset to fully zoomed out view"))
+        panel_sizer.Add(self.bt_image_reset, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        ############################################
+
+        panel_sizer.AddGrowableCol(9)
         
         ########
         # events
@@ -147,6 +201,10 @@ class TopPanel(wx.Panel):
         self.cb_flip_x.Bind(wx.EVT_CHECKBOX, self.on_cb_flip_x)
         self.cb_flip_y.Bind(wx.EVT_CHECKBOX, self.on_cb_flip_y)
         self.slider_image_stretch.Bind(wx.EVT_LEFT_UP, self.on_slider_image_stretch)
+        self.txt_stretch_lower_limit.Bind(wx.EVT_TEXT_ENTER, self.on_txt_stretch_lower_change)
+        self.txt_stretch_lower_limit.Bind(wx.EVT_KILL_FOCUS, self.on_txt_stretch_lower_lost_focus)
+        self.txt_stretch_upper_limit.Bind(wx.EVT_TEXT_ENTER, self.on_txt_stretch_upper_change)
+        self.txt_stretch_upper_limit.Bind(wx.EVT_KILL_FOCUS, self.on_txt_stretch_upper_lost_focus)
         
         #####
         # add to enable/disable list
@@ -163,6 +221,7 @@ class TopPanel(wx.Panel):
         panel.SetSizer(panel_sizer)
         
         return panel
+
 
     def create_filter_panel(self, parent: wx.Panel, bg_col: wx.Colour) -> wx.Panel:
         """Create the panel that will be on the right of the top pane and will be used to get filtering properties."""
@@ -269,36 +328,29 @@ class TopPanel(wx.Panel):
     def set_initial_stretch(self, image_data) -> None:
         """Work-out the initial image stretch values and set the ui sliders appropriately."""
         interval = MinMaxInterval()
-        _, vmax = interval.get_limits(image_data)
-        self.stretch_max = vmax
+        l_vmin, l_vmax = interval.get_limits(image_data)
+        self.stretch_min = l_vmin
+        self.stretch_max = l_vmax
         
+        self.cb_image_stretch.SetSelection(2)
+
         interval = ZScaleInterval()
         vmin, vmax = interval.get_limits(image_data)
-
+        
+        ld = vmin - vmin * 0.15
+        if ld < l_vmin:
+            ld = l_vmin
+        self.txt_stretch_lower_limit.SetValue(str(int(ld)))
+        self.slider_image_stretch.SetMin(int(ld))
+        
+        ud = vmax * 1.15
+        if ud > l_vmax:
+            ud = l_vmax
+        self.txt_stretch_upper_limit.SetValue(str(int(ud)))
+        self.slider_image_stretch.SetMax(int(ud))
+        
         self.slider_image_stretch.SetValues(vmin, vmax)
-        self.reset_stretch_slider_minmax()
         self.on_slider_image_stretch(None)
-
-    def reset_stretch_slider_minmax(self) -> None:
-        """Iffy non-liner stretching slider range. This is needed as stretching is a non-linear process."""
-        vmin, vmax = self.slider_image_stretch.GetValues()
-        d = vmax - vmin
-        if vmin != self.stretch_prev_vmin:
-            n_min = vmin - 2*d
-        else:
-            n_min = vmin
-        if vmax != self.stretch_prev_vmax:
-            n_max = vmax + 2*d
-        else:
-            n_max = vmax
-        if n_min < 0:
-            n_min = 0
-        if n_max > self.stretch_max:
-            n_max = self.stretch_max
-        self.stretch_prev_vmin = n_min
-        self.stretch_prev_vmax = n_max
-        self.slider_image_stretch.ResetLimits(n_min, n_max)
-        self.slider_image_stretch.SetValues(vmin, vmax)
 
     def on_cb_filter_change(self, event):
         """If the `use` checkbox has changed value, post the change event."""
@@ -329,9 +381,38 @@ class TopPanel(wx.Panel):
         vmin, vmax = self.slider_image_stretch.GetValues()
         self.lbl_image_stretch_min.SetLabel(str(int(vmin)))
         self.lbl_image_stretch_max.SetLabel(str(int(vmax)))
-        self.reset_stretch_slider_minmax()
         if event:
-            event.Skip() 
+            event.Skip()
+
+    def on_txt_stretch_lower_change(self, event):
+        vmin, vmax = self.slider_image_stretch.GetValues()
+        v = int(self.txt_stretch_lower_limit.GetValue())
+        if v < self.stretch_min:
+            v = self.stretch_min
+            self.txt_stretch_lower_limit.SetValue(str(v))
+        self.slider_image_stretch.SetMin(v)
+        self.slider_image_stretch.SetValues(vmin, vmax)
+        self.on_slider_image_stretch(None)
+        if event:
+            event.Skip()
+    
+    def on_txt_stretch_lower_lost_focus(self, event):
+        self.on_txt_stretch_lower_change(event)
+    
+    def on_txt_stretch_upper_change(self, event):
+        vmin, vmax = self.slider_image_stretch.GetValues()
+        v = int(self.txt_stretch_upper_limit.GetValue())
+        if v > self.stretch_max:
+            v = self.stretch_max
+            self.txt_stretch_upper_limit.SetValue(str(v))
+        self.slider_image_stretch.SetMax(v)
+        self.slider_image_stretch.SetValues(vmin, vmax)
+        self.on_slider_image_stretch(None)
+        if event:
+            event.Skip()
+
+    def on_txt_stretch_upper_lost_focus(self, event):
+        self.on_txt_stretch_upper_change(event)
 
     def get_stretch_min_max(self) -> Tuple[int, int]:
         """Get current min/max from the stretch slider"""

@@ -121,7 +121,7 @@ class MainFrame(wx.Frame):
         
         ## top
         self.top_panel.Bind(EV_FILTER_IMG_STRETCH, self.on_bt_image_stretch)
-        self.top_panel.Bind(EV_FILTER_IMG_STRETCH_RESET, self.on_bt_image_stretch)
+        self.top_panel.Bind(EV_FILTER_IMG_STRETCH_RESET, self.on_bt_image_stretch_reset)
         self.top_panel.Bind(EV_FILTER_IMG_RESET, self.on_bt_image_reset)
         self.top_panel.Bind(EV_FILTER_IMG_X_FLIP, self.on_cb_flip)
         self.top_panel.Bind(EV_FILTER_IMG_Y_FLIP, self.on_cb_flip)
@@ -182,6 +182,13 @@ class MainFrame(wx.Frame):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
             self.plot_data()
+            
+    def on_bt_image_stretch_reset(self, event):
+        """Reset the stretch."""
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            self.top_panel.set_initial_stretch(self.image_data)
+            self.on_bt_image_stretch(event)
         
     def on_bt_image_reset(self, event):
         """Reset the image back to starting values."""
