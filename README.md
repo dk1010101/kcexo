@@ -1,4 +1,4 @@
-![KCEXO](kcexo/assets/kcexo_001.png)
+![KCEXO](doc/images/kcexo.png)
 
 # Collection of exoplanet-related classes and operations
 
@@ -18,7 +18,7 @@ stars on it while allowing these stars to be filtered in various ways.
 Additionally it also highlights known variable stars so that they are
 definitely *not* chosen. For example:
 
-![Example of the comparator star finder tool in action](kcexo/assets/comp_stars/example.png)
+![Example of the comparator star finder tool in action](doc/images/comp_stars/main.png)
 
 The comparator tools expects science images to be fully reduced, so with
 bias (is on CCD), dark and flats subtracted. This science image is then
@@ -66,7 +66,7 @@ planning of exoplanet observations longer-term and one that is used for
 more short term (day-before) planning. As a teaser, this is the graph
 output from the long-term planner:
 
-![Example of the comparator star finder tool in action](kcexo/assets/example_plan_graph.png)
+![Example of the comparator star finder tool in action](doc/images/planner/example_plan_graph.png)
 
 the intent is for the above to become a report that can be used within
 the tool but also outside.
@@ -79,10 +79,10 @@ To install the library you will need:
 * GIT
 * ASTAP
 
-For installing on WIndows have a look [here](docs/install_windows.md)
+For installing on Windows have a look [at instructions here](docs/install_windows.md)
 and for Linux have a look [here](docs/install_linux.md). If you are on
-Mac have a look at Linux as Mac is really just UNIX re-badged so that
-should work.
+Mac, well, have a look at Linux as Mac is really just re-badged BSD UNIX which is close to linux
+so that should/may work.
 
 ## Debt
 
@@ -110,7 +110,7 @@ Thank you Gabriel!
 
 This project is Copyright (c) Daniel Kustrin and licensed under the
 terms of the GNU GPL v3+ license. This package is based upon the
-[Openastronomy packaging
+(much modified) [Openastronomy packaging
 guide](https://github.com/OpenAstronomy/packaging-guide) which is
 licensed under the BSD 3-clause licence. See the licenses folder for
 more information.

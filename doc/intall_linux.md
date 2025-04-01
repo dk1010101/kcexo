@@ -1,6 +1,4 @@
----
-title: Installing on Linux
----
+# Installing on Linux
 
 How you install will depend on if you are using Anaconda or vanilla
 Python but either way we recommend using virtual environments. If you
@@ -15,7 +13,7 @@ Before you stars, make sure that you have:
     website](https://www.hnsky.org/astap.htm) and you may choosealso
     to get a decent star library as well but that is optional
 
-# Anaconda
+## Anaconda
 
 To install under anaconda you will need to create a directory for KCEXO,
 create a virtual environment, install the library and then copy some
@@ -35,7 +33,7 @@ helpful scripts:
 
 Profit!
 
-# Vanilla Python
+## Vanilla Python
 
 To install under anaconda you will need to create a directory for KCEXO,
 create a virtual environment, install the library and then copy some
@@ -57,7 +55,7 @@ From now on you can start the comparator finder tool by running
 [kc_comp_stars]{.title-ref} and you can even create a desktop link for
 it if you like.
 
-# No Virtual environments
+## No Virtual environments
 
 While this is the simplest approach, are you sure? Really sure? OK\...:
 
