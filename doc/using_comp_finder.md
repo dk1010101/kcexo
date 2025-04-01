@@ -7,7 +7,7 @@ stars on it while allowing these stars to be filtered in various ways.
 Additionally it also highlights known variable stars so that they are
 definitely *not* chosen. For example:
 
-![Example of the comparator star finder tool in action](doc/images/comp_stars/main.png)
+![Example of the comparator star finder tool in action](images/comp_stars/main.png)
 
 The comparator tools expects science images to be fully reduced, so with
 bias (is on CCD), dark and flats subtracted. This science image is then
