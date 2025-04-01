@@ -1,4 +1,4 @@
-![KCEXO](kcexo/assets/kcexo_001.png){.align-center width="300px"}
+![KCEXO](kcexo/assets/kcexo_001.png)
 
 # Collection of exoplanet-related classes and operations
 
@@ -18,8 +18,7 @@ stars on it while allowing these stars to be filtered in various ways.
 Additionally it also highlights known variable stars so that they are
 definitely *not* chosen. For example:
 
-![Example of the comparator star finder tool in action](kcexo/assets/comp_stars/example.png){.align-center
-width="600px"}
+![Example of the comparator star finder tool in action](kcexo/assets/comp_stars/example.png)
 
 The comparator tools expects science images to be fully reduced, so with
 bias (is on CCD), dark and flats subtracted. This science image is then
@@ -67,8 +66,7 @@ planning of exoplanet observations longer-term and one that is used for
 more short term (day-before) planning. As a teaser, this is the graph
 output from the long-term planner:
 
-![Example of the comparator star finder tool in action](kcexo/assets/example_plan_graph.png){.align-center
-width="400px"}
+![Example of the comparator star finder tool in action](kcexo/assets/example_plan_graph.png)
 
 the intent is for the above to become a report that can be used within
 the tool but also outside.
@@ -81,8 +79,8 @@ To install the library you will need:
 * GIT
 * ASTAP
 
-For installing on WIndows have a look [here](/docs/install_windows.md)
-and for Linux have a look [here](/docs/install_linux.md). If you are on
+For installing on WIndows have a look [here](docs/install_windows.md)
+and for Linux have a look [here](docs/install_linux.md). If you are on
 Mac have a look at Linux as Mac is really just UNIX re-badged so that
 should work.
 
