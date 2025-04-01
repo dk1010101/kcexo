@@ -79,8 +79,8 @@ To install the library you will need:
 * GIT
 * ASTAP
 
-For installing on Windows have a look [at instructions here](docs/install_windows.md)
-and for Linux have a look [here](docs/install_linux.md). If you are on
+For installing on Windows have a look [here](doc/install_windows.md)
+and for Linux have a look [here](doc/install_linux.md). If you are on
 Mac, well, have a look at Linux as Mac is really just re-badged BSD UNIX which is close to linux
 so that should/may work.
 
