@@ -78,7 +78,7 @@ To install the library you will need:
   * GIT
   * ASTAP
 
-For installing on WIndows have a look `here <docs/install_windows,rst>`_ and for Linux have a look `here <docs/install_linux.rst>`_. If you are on Mac have a look at Linux 
+For installing on WIndows have a look :dac:`here <docs/install_windows>` and for Linux have a look :doc:`here <docs/install_linux.rst>`_. If you are on Mac have a look at Linux 
 as Mac is really just UNIX re-badged so that should work.
 
 Debt
