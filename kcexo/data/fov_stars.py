@@ -115,7 +115,7 @@ WHERE
 GROUP BY main_id, oid, RA, DEC, otype, mv.vartyp, mv.epoch, mv.period, mv.magtyp, mv.vmin, mv.vmax, mv.oidref, af.oidref,i.id, i2.id
 ORDER BY dist, "B-V", RA, DEC
 """
-        print(self.simbad_query)
+        # print(self.simbad_query)
 
     def create_gaia_query_by_name(self) -> None:
         """Get all gaia star details by gaia id"""

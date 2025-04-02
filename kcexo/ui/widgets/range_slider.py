@@ -329,6 +329,8 @@ class RangeSlider(wx.Panel):
         self.Refresh()
 
     def ResetMinMax(self, minValue, maxValue):
+        if minValue == maxValue:
+            maxValue *= 1.001  # arbitrary
         self.min_value = minValue
         self.thumbs['low'].SetValue(minValue)
         self.max_value = maxValue

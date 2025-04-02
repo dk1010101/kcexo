@@ -10,7 +10,7 @@ from astropy.visualization import SqrtStretch, LogStretch, AsinhStretch, ZScaleI
 from kcexo.ui.widgets.new_event import new_command_event
 from kcexo.ui.widgets.range_slider import RangeSlider
 from kcexo.ui.widgets.filter_control import ValFilter
-from kcexo.ui.widgets.mpl_canvas import MatplotlibPanel, EV_MOUSE_MOTION
+from kcexo.ui.widgets.mpl_canvas import MatplotlibPanel, EV_MOUSE_MOTION  # pylint:disable=unused-import
 
 
 FilterChangeEvent, EV_FILTER_CHANGE = new_command_event()
@@ -109,7 +109,10 @@ class TopPanel(wx.Panel):
         panel_sizer.Add((5, 15), 0, 0, 0)
 
         # 4 - stretch combo box
-        self.cb_image_stretch = wx.ComboBox(panel, wx.ID_ANY, choices=["linear", "log", "sinh", "asinh", "square", "sqrt"], style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SIMPLE)
+        self.cb_image_stretch = wx.ComboBox(panel, wx.ID_ANY, 
+                                            choices=["linear", "log", "sinh", "asinh", "square", "sqrt"], 
+                                            style=wx.CB_DROPDOWN | wx.CB_READONLY | wx.CB_SIMPLE,
+                                            name="cb_image_stretch")
         self.cb_image_stretch.SetMinSize((60, 25))
         self.cb_image_stretch.SetSelection(2)
         self.cb_image_stretch.SetToolTip(wx.ToolTip("Algorithm to use to stretch the image"))
@@ -120,7 +123,7 @@ class TopPanel(wx.Panel):
         panel_sizer.Add((15, 15), 0, 0, 0)
 
         # 6 - text box, lower limit
-        self.txt_stretch_lower_limit = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER|wx.TE_RIGHT)
+        self.txt_stretch_lower_limit = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER|wx.TE_RIGHT, name="txt_stretch_lower_limit")
         self.txt_stretch_lower_limit.SetMinSize((45, -1))
         self.txt_stretch_lower_limit.SetToolTip(wx.ToolTip("The lower limit of the stretch range\nEnter new value and press enter to change"))
         panel_sizer.Add(self.txt_stretch_lower_limit, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 0)
@@ -136,7 +139,7 @@ class TopPanel(wx.Panel):
         panel_sizer.Add(self.lbl_image_stretch_min, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
         # 9 - slider
-        self.slider_image_stretch = RangeSlider(panel, lowValue=0, highValue=65535, minValue=0, maxValue=65535)
+        self.slider_image_stretch = RangeSlider(panel, lowValue=0, highValue=65535, minValue=0, maxValue=65535, name="slider_image_stretch")
         self.slider_image_stretch.SetBackgroundColour(bg_col)
         self.slider_image_stretch.SetMinSize((200, 15))
         panel_sizer.Add(self.slider_image_stretch, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
@@ -152,7 +155,7 @@ class TopPanel(wx.Panel):
         panel_sizer.Add(label_s2, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
         # 12 - text box, upper limit
-        self.txt_stretch_upper_limit = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER|wx.TE_LEFT)
+        self.txt_stretch_upper_limit = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER|wx.TE_LEFT, name="txt_stretch_upper_limit")
         self.txt_stretch_upper_limit.SetMinSize((45, -1))
         self.txt_stretch_upper_limit.SetToolTip(wx.ToolTip("The upper limit of the stretch range\nEnter new value and press enter to change"))
         panel_sizer.Add(self.txt_stretch_upper_limit, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 0)
@@ -174,12 +177,12 @@ class TopPanel(wx.Panel):
         panel_sizer.Add((30, 15), 0, 0, 0)
 
         # 17 - "Flip X" check box
-        self.cb_flip_x = wx.CheckBox(panel, wx.ID_ANY, "Flip X")
+        self.cb_flip_x = wx.CheckBox(panel, wx.ID_ANY, "Flip X", name="cb_flip_x")
         self.cb_flip_x.SetToolTip(wx.ToolTip("Mirror the image"))
         panel_sizer.Add(self.cb_flip_x, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
         
         # 18 - "Flip Y" check box
-        self.cb_flip_y = wx.CheckBox(panel, wx.ID_ANY, "Flip Y")
+        self.cb_flip_y = wx.CheckBox(panel, wx.ID_ANY, "Flip Y", name="cb_flip_y")
         self.cb_flip_y.SetToolTip(wx.ToolTip("Flip the image"))
         panel_sizer.Add(self.cb_flip_y, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
 
@@ -245,7 +248,8 @@ class TopPanel(wx.Panel):
                                   "Distance", has_nan=False, 
                                   colour=bg_col, 
                                   show_titles=True, 
-                                  titles=["Target\nValues", "Use", " Inc\nNaN"])
+                                  titles=["Target\nValues", "Use", " Inc\nNaN"],
+                                  name="flt_dist")
         filters_sizer.Add(self.flt_dist, 0, wx.EXPAND, 0)
         
         ### row 1.2 - blank
@@ -254,7 +258,9 @@ class TopPanel(wx.Panel):
         ############################
         ### row 1.3 - Gaia Colour
         
-        self.flt_gaia = ValFilter(panel, wx.ID_ANY, "Gbp-Grp", has_nan=True, colour=bg_col)
+        self.flt_gaia = ValFilter(panel, wx.ID_ANY, 
+                                  "Gbp-Grp", has_nan=True, colour=bg_col,
+                                  name="flt_dist")
         filters_sizer.Add(self.flt_gaia, 0, wx.EXPAND, 0)
         
         ### row 1.4 - blank
@@ -263,7 +269,9 @@ class TopPanel(wx.Panel):
         ############################
         ### row 1.5 - B-V Colour
         
-        self.flt_bv = ValFilter(panel, wx.ID_ANY, "B-V", has_nan=True, colour=bg_col)
+        self.flt_bv = ValFilter(panel, wx.ID_ANY, 
+                                "B-V", has_nan=True, colour=bg_col,
+                                name="flt_dist")
         filters_sizer.Add(self.flt_bv, 0, wx.EXPAND, 0)
         
         ### row 1.6 - blank
@@ -272,13 +280,15 @@ class TopPanel(wx.Panel):
         ############################
         ### row 1.7 - B
         
-        #self.flt_b = ValFilter(panel, wx.ID_ANY, "B", has_nan=True, colour=bg_col)
+        #self.flt_b = ValFilter(panel, wx.ID_ANY, "B", has_nan=True, colour=bg_col, name="flt_dist")
         #filters_sizer.Add(self.flt_b, 0, wx.EXPAND, 0)
         
         ### row 1.8 - blank
         #filters_sizer.Add((0, 5), 0, 0, 0)
         
-        self.flt_g = ValFilter(panel, wx.ID_ANY, "G", has_nan=True, colour=bg_col)
+        self.flt_g = ValFilter(panel, wx.ID_ANY, 
+                               "G", has_nan=True, colour=bg_col,
+                               name="flt_g")
         filters_sizer.Add(self.flt_g, 0, wx.EXPAND, 0)
         
         ### row 1.8 - blank
@@ -287,7 +297,9 @@ class TopPanel(wx.Panel):
         ############################
         ### row 1.9 - V
         
-        self.flt_v = ValFilter(panel, wx.ID_ANY, "V", has_nan=True, colour=bg_col)
+        self.flt_v = ValFilter(panel, wx.ID_ANY, 
+                               "V", has_nan=True, colour=bg_col,
+                               name="flt_v")
         filters_sizer.Add(self.flt_v, 0, wx.EXPAND, 0)
         
         ### row 1.10 - blank
@@ -296,7 +308,9 @@ class TopPanel(wx.Panel):
         ############################
         ### row 1.11 - R
         
-        self.flt_r = ValFilter(panel, wx.ID_ANY, "R", has_nan=True, colour=bg_col)
+        self.flt_r = ValFilter(panel, wx.ID_ANY, 
+                               "R", has_nan=True, colour=bg_col,
+                               name="flt_r")
         filters_sizer.Add(self.flt_r, 0, wx.EXPAND, 0)
         
         ### row 1.12 - blank
@@ -320,7 +334,7 @@ class TopPanel(wx.Panel):
         no_vars_sizer.Add((3, 0), (1, 0), flag=wx.EXPAND)
         no_vars_sizer.Add((41, 0), (1, 1), flag=wx.EXPAND)
 
-        self.cb_show_var_stars = wx.CheckBox(panel, wx.ID_ANY, " Variable/multiple/peculiar stars")
+        self.cb_show_var_stars = wx.CheckBox(panel, wx.ID_ANY, " Variable/multiple/peculiar stars", name="cb_show_var_stars")
         self.cb_show_var_stars.SetValue(True)
         no_vars_sizer.Add(self.cb_show_var_stars, (1, 2), (1, 3), flag=wx.EXPAND)
         
@@ -329,7 +343,7 @@ class TopPanel(wx.Panel):
         no_vars_sizer.Add((3, 0), (2, 0), flag=wx.EXPAND)
         no_vars_sizer.Add((41, 0), (2, 1), flag=wx.EXPAND)
 
-        self.cb_show_pm_stars = wx.CheckBox(panel, wx.ID_ANY, " High proper motion stars")
+        self.cb_show_pm_stars = wx.CheckBox(panel, wx.ID_ANY, " High proper motion stars", name="cb_show_pm_stars")
         self.cb_show_pm_stars.SetValue(True)
         no_vars_sizer.Add(self.cb_show_pm_stars, (2, 2), (1, 3), flag=wx.EXPAND)
         
@@ -338,7 +352,7 @@ class TopPanel(wx.Panel):
         no_vars_sizer.Add((3, 0), (3, 0), flag=wx.EXPAND)
         no_vars_sizer.Add((41, 0), (3, 1), flag=wx.EXPAND)
 
-        self.cb_show_hv_stars = wx.CheckBox(panel, wx.ID_ANY, " High velocity stars")
+        self.cb_show_hv_stars = wx.CheckBox(panel, wx.ID_ANY, " High velocity stars", name="cb_show_hv_stars")
         self.cb_show_hv_stars.SetValue(True)
         no_vars_sizer.Add(self.cb_show_hv_stars, (3, 2), (1, 3), flag=wx.EXPAND)
         
@@ -497,10 +511,6 @@ class TopPanel(wx.Panel):
     def on_txt_stretch_upper_lost_focus(self, event):
         """Handle users clicking away from the control for the upper extent value for the stretch."""
         self.on_txt_stretch_upper_change(event)
-
-    def on_canvas_motion(self, event):
-        print(event.xdata, event.ydata)
-
 
     def get_stretch_min_max(self) -> Tuple[int, int]:
         """Get current min/max from the stretch slider"""

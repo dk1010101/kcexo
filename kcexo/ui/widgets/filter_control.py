@@ -65,12 +65,12 @@ class ValFilter(wx.Panel):
         top_sizer.Add((3,0), (start_row+1, 0), flag=wx.EXPAND)
         self.lbl_target_value = wx.StaticText(self, wx.ID_ANY, f"{target_value:.{self.num_precision}f}")
         top_sizer.Add(self.lbl_target_value, (start_row+1, 1), flag=wx.ALIGN_CENTER)
-        self.cb_use = wx.CheckBox(self, wx.ID_ANY, "")
+        self.cb_use = wx.CheckBox(self, wx.ID_ANY, "", name=self.GetName()+"_cb_use")
         top_sizer.Add(self.cb_use, (start_row+1, 2), flag=wx.ALIGN_CENTER)
-        self.slider = RangeSlider(self, lowValue=0, highValue=10, minValue=0, maxValue=10)
+        self.slider = RangeSlider(self, lowValue=0, highValue=10, minValue=0, maxValue=10, name=self.GetName()+"_slider")
         self.slider.SetBackgroundColour(colour)
         top_sizer.Add(self.slider, (start_row+1, 3), flag=wx.EXPAND)
-        self.cb_nan = wx.CheckBox(self, wx.ID_ANY, "")
+        self.cb_nan = wx.CheckBox(self, wx.ID_ANY, "", name=self.GetName()+"_cb_nan")
         top_sizer.Add(self.cb_nan, (start_row+1, 4), flag=wx.ALIGN_CENTER)
         if not self.has_nan:
             self.cb_nan.Disable()
@@ -143,7 +143,7 @@ class ValFilter(wx.Panel):
     
     def SetMinMax(self, v_min: float, v_max: float, precision=None):
         """Set the slider min-max extent."""
-        if v_min is None or np.isnan(v_min) or v_max is None or np.isnan(v_max):
+        if v_min is None or np.isnan(v_min) or np.ma.is_masked(v_min) or v_max is None or np.isnan(v_max) or np.ma.is_masked(v_max):
             self.Disable()
         else:
             self.Enable()
@@ -152,11 +152,11 @@ class ValFilter(wx.Panel):
             p = self.num_precision
         else:
             p = precision
-        if v_min or v_min == 0:
+        if (v_min or v_min == 0) and not (np.isnan(v_min) or np.ma.is_masked(v_min)):
             self.lbl_min.SetLabel(f"{v_min:.{p}f}")
         else:
             self.lbl_min.SetLabel("--")
-        if v_max or v_max == 0:
+        if (v_max or v_max == 0) and not (np.isnan(v_max) or np.ma.is_masked(v_max)):
             self.lbl_max.SetLabel(f"{v_max:.{p}f}")
         else:
             self.lbl_max.SetLabel("--")
@@ -173,7 +173,7 @@ class ValFilter(wx.Panel):
 
     def SetTargetValue(self, val, precision=None):
         """Set the target's value on the control so that users can easily see what they are working with."""
-        if val is None or np.isnan(val):
+        if val is None or np.isnan(val) or np.ma.is_masked(val):
             cmin = self.slider.GetMin()
             cmax = self.slider.GetMax()
             if cmin is None or np.isnan(cmin) or cmax is None or np.isnan(cmax):
@@ -184,7 +184,7 @@ class ValFilter(wx.Panel):
             p = self.num_precision
         else:
             p = precision
-        if (val or val==0) and not np.isnan(val):
+        if (val or val==0) and not np.isnan(val) and not np.ma.is_masked(val):
             self.lbl_target_value.SetLabel(f"{val:.{p}f}")
         else:
             self.lbl_target_value.SetLabel("--")
