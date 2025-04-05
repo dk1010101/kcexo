@@ -9,7 +9,7 @@ from astropy.visualization import SqrtStretch, LogStretch, AsinhStretch, ZScaleI
 
 from kcexo.ui.widgets.new_event import new_command_event
 from kcexo.ui.widgets.range_slider import RangeSlider
-from kcexo.ui.widgets.filter_control import ValFilter
+from kcexo.ui.comp_stars.filter_control import ValFilter
 from kcexo.ui.widgets.mpl_canvas import MatplotlibPanel, EV_MOUSE_MOTION  # pylint:disable=unused-import
 
 
