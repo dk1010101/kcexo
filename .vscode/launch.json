@@ -6,10 +6,15 @@
     "configurations": [
     
         {
-            "name": "Python Debugger: Module",
+            "name": "PyD: Comp Stars",
             "type": "debugpy",
             "request": "launch",
             "module": "kcexo.ui.comp_stars.exo_comp_stars"
+        },
+        {
+            "name": "PyD: Planner",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "kcexo.ui.planner.exo_planner"
         }
-    ]
 }

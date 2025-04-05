@@ -29,6 +29,7 @@ dynamic = ["version"]
 
 [project.scripts]
 kc_comp_stars = "kcexo.ui.comp_stars.exo_comp_stars:main"
+kc_planner = "kcexo.ui.planner.exo_planner:main"
 
 [project.optional-dependencies]
 test = [

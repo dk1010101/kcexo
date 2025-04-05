@@ -210,7 +210,7 @@ class Observatory:
 class Observatories:
     """Collection of observatories and instruments we are interested in."""
     
-    def __init__(self, data: dict) -> None:
+    def __init__(self, data: dict, root_dir: Path|None = None) -> None:
         # validate that the provided json doc is valid
         self.log = logging.getLogger()
         v = Draft202012Validator(observatories_schema)
@@ -228,7 +228,12 @@ class Observatories:
         
         # configuration
         config: dict = data['configuration']
-        self.root_dir: Path = Path(config['root'])
+        self.root_dir: Path
+        if root_dir:
+            self.root_dir = root_dir
+        else:
+            self.root_dir = Path(config['root'])
+        
         self.cache_dir: Path = self.root_dir.joinpath("cache")
         self.cache_image_dir: Path = self.cache_dir.joinpath("imagecache")
         data_sources: list = config['data_sources']

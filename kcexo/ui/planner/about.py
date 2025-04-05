@@ -6,7 +6,7 @@ from wx.lib.wordwrap import wordwrap
 def show_about_box(parent):
     info = wx.adv.AboutDialogInfo()
     _icon = wx.NullIcon
-    with res.path("kcexo.assets.planner", "splash_44.png") as path:
+    with res.path("kcexo.assets.planner", "icon.png") as path:
         _icon.CopyFromBitmap(wx.Bitmap(path.as_posix(), wx.BITMAP_TYPE_ANY))    
     info.Icon = _icon
     info.Name = "Exoplanet Planner"
