@@ -8,9 +8,8 @@ import importlib.resources as res
 from pathlib import Path
 import yaml
 
-
-
 import wx
+import wx.lib.agw.aui as aui
 
 from kcexo.observatory import Observatories
 from kcexo.data.exoclock_data import ExoClockData
@@ -58,21 +57,24 @@ class MainFrame(wx.Frame):
         
         ############################################
         # Tab
-        self.tab_main = wx.Notebook(self.panel_main, wx.ID_ANY, style=wx.NB_BOTTOM)
+        #self.tab_main = wx.Notebook(self.panel_main, wx.ID_ANY, style=wx.NB_BOTTOM)
+        self.tab_main = aui.AuiNotebook(self.panel_main, wx.ID_ANY, agwStyle=aui.AUI_NB_BOTTOM|aui.AUI_NB_SMART_TABS)
         sizer_main.Add(self.tab_main, 1, wx.EXPAND, 0)
         
         ###################
         # tab 0 - obs
-        self.tab_main_pane_obs = ObsPanel(self.tab_main, wx.ID_ANY, self.observatories, style=wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE | wx.TAB_TRAVERSAL)
-        self.tab_main.AddPage(self.tab_main_pane_obs, "Observatory")
+        self.tab_main_pane_obs = ObsPanel(self.tab_main, wx.ID_ANY, 
+                                          self.observatories, 
+                                          style=wx.BORDER_NONE | wx.FULL_REPAINT_ON_RESIZE | wx.TAB_TRAVERSAL)
+        self.tab_main.AddPage(self.tab_main_pane_obs, "Observatory", select=True, tooltip="Observatory details")
 
         ###################
         # tab 1 - obs
         self.tab_main_pane_mt = MultipleTargetsPanel(self.tab_main, wx.ID_ANY, 
                                                      observatory=self.tab_main_pane_obs.observatory,
                                                      exoclock_db=self.exoclock_db,
-                                                     style=wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE | wx.TAB_TRAVERSAL)
-        self.tab_main.AddPage(self.tab_main_pane_mt, "All Targets")
+                                                     style=wx.BORDER_NONE | wx.FULL_REPAINT_ON_RESIZE | wx.TAB_TRAVERSAL)
+        self.tab_main.AddPage(self.tab_main_pane_mt, "All Targets", select=False, tooltip="Transits for multiple targets\nover multiple dates")
 
 
         ###################
@@ -80,8 +82,8 @@ class MainFrame(wx.Frame):
         self.tab_main_pane_st = SingleTargetPanel(self.tab_main, wx.ID_ANY, 
                                                   observatory=self.tab_main_pane_obs.observatory,
                                                   exoclock_db=self.exoclock_db,
-                                                  style=wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE | wx.TAB_TRAVERSAL)
-        self.tab_main.AddPage(self.tab_main_pane_st, "Single Target")
+                                                  style=wx.BORDER_NONE | wx.FULL_REPAINT_ON_RESIZE | wx.TAB_TRAVERSAL)
+        self.tab_main.AddPage(self.tab_main_pane_st, "Single Target", select=False, tooltip="Transits for a single targets\nover multiple dates")
 
 
         ###################
@@ -89,8 +91,8 @@ class MainFrame(wx.Frame):
         self.tab_main_pane_sd = SingleDayPanel(self.tab_main, wx.ID_ANY, 
                                                observatory=self.tab_main_pane_obs.observatory,
                                                exoclock_db=self.exoclock_db,
-                                               style=wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE | wx.TAB_TRAVERSAL)
-        self.tab_main.AddPage(self.tab_main_pane_sd, "Single Night")
+                                               style=wx.BORDER_NONE | wx.FULL_REPAINT_ON_RESIZE | wx.TAB_TRAVERSAL)
+        self.tab_main.AddPage(self.tab_main_pane_sd, "Single Night", select=False, tooltip="Single evening transit planner")
 
         ###################
         self.panel_main.SetSizer(sizer_main)
