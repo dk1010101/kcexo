@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 # pylint:disable=unused-argument, invalid-name
 import datetime
+from typing import Any
+
 import astropy.units as u
 
 import wx
@@ -11,6 +13,7 @@ from kcexo.ui.widgets.utc_offset_validator import UTCOffsetValidator
 
 
 class ObsPanel(wx.Panel):
+    """Observatory Panel"""
     def __init__(self, 
                  parent,
                  wid, 
@@ -23,7 +26,9 @@ class ObsPanel(wx.Panel):
         
         super().__init__(parent=parent, id=wid, pos=pos, size=size, name=name, *argv, **kwargs)
     
-        self.utc_offset = 0.0
+        self.utc_offset_hrs = 0.0
+    
+        self.observers = []
     
         self.observatories = observatories
         self.observatory: Observatory = None
@@ -66,15 +71,16 @@ class ObsPanel(wx.Panel):
         self.bt_obs_utc_reset.Enable(False)
         grid_sizer_obs.Add(self.bt_obs_utc_reset, (3, 4), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
 
-        self.bt_select_obs = wx.Button(self, wx.ID_ANY, "Apply")
-        grid_sizer_obs.Add(self.bt_select_obs, (4, 5), (1, 1), 0, 0)
+        #self.bt_select_obs = wx.Button(self, wx.ID_ANY, "Apply")
+        #grid_sizer_obs.Add(self.bt_select_obs, (4, 5), (1, 1), 0, 0)
 
         self.pgrid_obs: wx.propgrid.PropertyGridManager = wx.propgrid.PropertyGridManager(self, wx.ID_ANY)
-        grid_sizer_obs.Add(self.pgrid_obs, (5, 1), (1, 6), wx.EXPAND, 0)
-        grid_sizer_obs.Add(20, 20, (6, 0), (1, 1), 0, 0)
-        grid_sizer_obs.Add(20, 20, (6, 7), (1, 1), 0, 0)
+        
+        grid_sizer_obs.Add(self.pgrid_obs, (4, 1), (1, 6), wx.EXPAND, 0)
+        grid_sizer_obs.Add(20, 20, (5, 0), (1, 1), 0, 0)
+        grid_sizer_obs.Add(20, 20, (5, 7), (1, 1), 0, 0)
 
-        grid_sizer_obs.AddGrowableRow(5)
+        grid_sizer_obs.AddGrowableRow(4)
         grid_sizer_obs.AddGrowableCol(6)
 
         self.SetAutoLayout(True)
@@ -82,7 +88,7 @@ class ObsPanel(wx.Panel):
         grid_sizer_obs.Fit(self)
         self.Layout()
         
-        self.update_grid()
+        self.update()
         
         self.cb_obs.Bind(wx.EVT_CHOICE, self.on_cb_obs_change)
         self.cb_obs_show_utc.Bind(wx.EVT_CHECKBOX, self.on_cb_obs_show_utc_change)
@@ -97,9 +103,9 @@ class ObsPanel(wx.Panel):
         self.observatory = obss.observatories[obss.default_observatory]
         idx = self.known_obs.index(obss.default_observatory)
         self.cb_obs.SetSelection(idx)
-        self.update_grid()
+        self.update()
         
-    def update_grid(self) -> None:
+    def update(self) -> None:
         if not self.observatories:
             return
         
@@ -122,7 +128,7 @@ class ObsPanel(wx.Panel):
         self.utc_offset_hrs = obs.observer.timezone.utcoffset(now).total_seconds() / 3600.0
         self.txt_obs_utc_offset.SetValue(f"{self.utc_offset_hrs:+.1f}")
         
-        page.Append(wx.propgrid.StringProperty("UTC Offset Now (hrs)", wx.propgrid.PG_LABEL, f"{self.utc_offset_hrs:+.1f}"))
+        # page.Append(wx.propgrid.StringProperty("UTC Offset Now (hrs)", wx.propgrid.PG_LABEL, f"{self.utc_offset_hrs:+.1f}"))
         
         page.Append(wx.propgrid.PropertyCategory("Telescope & Instrument"))
         page.Append(wx.propgrid.StringProperty("Telescope Focal Length", wx.propgrid.PG_LABEL, str(obs.focal_length)))
@@ -140,9 +146,19 @@ class ObsPanel(wx.Panel):
         page.Append(wx.propgrid.StringProperty("Exoplanet observation time after", wx.propgrid.PG_LABEL, str(obs.exo_hours_after)))
         page.Append(wx.propgrid.StringProperty("Meridian flip duration", wx.propgrid.PG_LABEL, str(obs.meridian_crossing_duration)))
         
+        for p in page.GetPyIterator():
+            page.DisableProperty(p)
+        
     def on_cb_obs_change(self, event) -> None:
         """Deal with the change of observatory."""
-        self.update_grid()
+        # self.observatory = self.observatories[event.GetString()]
+        wx.Yield()
+        with wx.BusyCursor():
+            self.parent.update_status_bar("Updating observatory...")
+            
+            self.update()
+            self.notify_observers_obs()
+            self.parent.clear_status_bar()
 
     def on_cb_obs_show_utc_change(self, event) -> None:
         """Change visibility of UTC controls depending on if we are all UTC or not."""
@@ -162,6 +178,7 @@ class ObsPanel(wx.Panel):
             now = datetime.datetime.now()
             self.utc_offset_hrs = self.observatory.observer.timezone.utcoffset(now).total_seconds() / 3600.0
             self.txt_obs_utc_offset.SetValue(f"{self.utc_offset_hrs:+.1f}")
+            self.notify_observers_utc()
         else:
             self.txt_obs_utc_offset.SetValue("")
 
@@ -171,4 +188,18 @@ class ObsPanel(wx.Panel):
             return
         val = self.txt_obs_utc_offset.GetValue()
         self.utc_offset_hrs = float(val)
+        self.notify_observers_utc()
     
+    def add_observer(self, obj: Any) -> None:
+        """Add an object we need to tell about changes to the selected observatory."""
+        self.observers.append(obj)
+        
+    def notify_observers_obs(self) -> None:
+        """Update all observers with the new observatory data"""
+        for o in self.observers:
+            o.set_observatory(self.observatory)
+            
+    def notify_observers_utc(self) -> None:
+        """Update all observers with the new UTC offset"""
+        for o in self.observers:
+            o.set_utc_offset(self.utc_offset_hrs)

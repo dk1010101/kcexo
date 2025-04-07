@@ -6,22 +6,30 @@ import string
 import wx
 
 
-class UTCOffsetValidator(wx.Validator):
-    """WX validator for numeric UTC offsets"""    
-    pattern = re.compile("^[+-]?[0-9]+(.[0-9]*)?$")
-        
-    def __init__(self):
+class NumberValidator(wx.Validator):
+    """Validate input for integers only"""
+    
+    pattern = re.compile("^[0-9]+$")
+    minus_pattern = re.compile("^[-]?[0-9]+$")
+    
+    def __init__(self, allow_negative: bool=False):
         wx.Validator.__init__(self)
-        # self.Bind(wx.EVT_CHAR, self.OnChar)
+        self.allow_negative = allow_negative
+        self.Bind(wx.EVT_CHAR, self.OnChar)
 
     def Clone(self):
-        return UTCOffsetValidator()
+        return NumberValidator(allow_negative=self.allow_negative)
 
     def Validate(self, win):
         tc = self.GetWindow()
         val = tc.GetValue()
 
-        ok = self.pattern.match(val) is not None
+        if self.allow_negative:
+            p = self.minus_pattern
+        else:
+            p = self.pattern
+        
+        ok = p(val)
         if not ok:
             tc.SetBackgroundColour("pink")
             tc.SetFocus()
@@ -31,20 +39,17 @@ class UTCOffsetValidator(wx.Validator):
             tc.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
             tc.Refresh()
             return True
-        
+
     def OnChar(self, event):
         key = event.GetKeyCode()
-
         if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key == wx.WXK_BACK or key > 255:
             event.Skip()
             return
-        
-        ck = chr(key)
-        if ck in string.digits or ck in ['-', '.', '+']:
+
+        if chr(key) in string.digits or (self.allow_negative and chr(key) == '-'):
             event.Skip()
             return
 
         if not wx.Validator.IsSilent():
             wx.Bell()
-
         return

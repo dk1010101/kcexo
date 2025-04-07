@@ -28,7 +28,7 @@ class SourceDefinition(NamedTuple):
 class Observatory:
     """All things related to the observing location and the equipment that is to be used."""    
     
-    def __init__(self, data: dict, root: Path) -> None:
+    def __init__(self, name: str, data: dict, root: Path) -> None:
         """Create the observatory object from dictionary.
         
         The dictionary is usually created by reading in the YAML or JSON file with
@@ -37,6 +37,7 @@ class Observatory:
         This "constructor" also creates horizon and twilight constraint list, if the right data
         is passed in.
         """
+        self.name = name
         physical_data = data['physical']
         if np.abs(physical_data['lat_deg']*u.deg) > 65*u.deg:
             raise ValueError("Only Longitudes below 65 degrees or above -65 degrees are supported.")
@@ -97,6 +98,7 @@ class Observatory:
         """Equality for all..."""
         if isinstance(other, Observatory):
             return all([
+                self.name == other.name,
                 self.location.lat == other.location.lat,
                 self.location.lon == other.location.lon,
                 self.location.height == other.location.height,
@@ -248,7 +250,7 @@ class Observatories:
         observatories: Dict[str, Observatory] = data['observatories']
         self.observatories = {}
         for obs in observatories:
-            self.observatories[obs['name']] = Observatory(obs, self.root_dir)
+            self.observatories[obs['name']] = Observatory(obs['name'], obs, self.root_dir)
 
     def __eq__(self, other: Any):
         """Equality for all..."""
