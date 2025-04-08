@@ -89,7 +89,7 @@ def create_transit_schematic(transit: Transit,
     
     if show_labels:
         ax.set_ylabel("Transit Depth (mmag)")
-        ax.set_xlabel("Time (hr)")
+        ax.set_xlabel("Time (UTC)")
     
     if use_times:
         x2_tick_labels = [t.iso[11:16] for t in times]

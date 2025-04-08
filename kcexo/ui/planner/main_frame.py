@@ -1,17 +1,18 @@
 # -*- coding: UTF-8 -*-
 # cSpell:ignore hmsdms OBJCTRA OBJCTDEC xlim ylim yrange kcexo otype exoclock
 # pylint:disable=unused-argument
-import os
-import copy
+import logging
 import warnings
 import importlib.resources as res
 from pathlib import Path
 import yaml
 
+from pubsub import pub
+
 import wx
 import wx.lib.agw.aui as aui
 
-from kcexo.observatory import Observatories
+from kcexo.observatory import Observatories, Observatory
 from kcexo.data.exoclock_data import ExoClockData
 
 from kcexo.ui.planner.about import show_about_box
@@ -25,10 +26,12 @@ from kcexo.ui.widgets.license_dialog import LicenseViewerDialog
 class MainFrame(wx.Frame):
     """Main frame of the star comparison application"""
     def __init__(self, *args, **kwds):
-
+        self.log = logging.getLogger("KCEXO")
         self.observatories: Observatories = None
+        self.observatory: Observatory = None
         self.exoclock_db: ExoClockData = None
         self.ax = None
+        self.allow_tab_change: bool = True
              
         # things that can be mass-enabled or mass-disabled
         self.ed_controls = []
@@ -100,17 +103,18 @@ class MainFrame(wx.Frame):
         
         ######################################
         # EVENTS
-        
-        ###################
-        # add observers who are interested in observatory (and utc) changes
-        self.tab_main_pane_obs.add_observer(self.tab_main_pane_mt)
-        self.tab_main_pane_obs.add_observer(self.tab_main_pane_st)
-        self.tab_main_pane_obs.add_observer(self.tab_main_pane_sd)
-
+ 
         ###################
         # vanilla events
-        self.tab_main.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_tab_main_page_changed)
-    
+        #self.tab_main.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_tab_main_page_changed)
+        self.tab_main.Bind(aui.EVT_AUINOTEBOOK_PAGE_CHANGING, self.on_tab_main_page_changing)
+        self.tab_main.Bind(aui.EVT_AUINOTEBOOK_PAGE_CHANGED, self.on_tab_main_page_changed)
+        
+        pub.subscribe(self.on_pubsub_status_set, "status.set")
+        pub.subscribe(self.on_pubsub_status_clear, "status.clear")
+        pub.subscribe(self.on_pubsub_tabs_preventchange, "tabs.preventchange")
+        pub.subscribe(self.on_pubsub_tabs_allowchange, "tabs.allowchange")
+        
     ##############################
     # UI CREATION
     
@@ -138,7 +142,28 @@ class MainFrame(wx.Frame):
         self.SetMenuBar(frame_menubar)
     
     ##############################
-    # EVENTS
+    # EVENTS - PUBSUB
+    
+    def on_pubsub_tabs_preventchange(self):
+        """Disallow tab change if so requested"""
+        self.log.debug("MF - on_pubsub_tabs_preventchange")
+        self.allow_tab_change = False
+    
+    def on_pubsub_tabs_allowchange(self):
+        """Allow tab change if so requested"""
+        self.log.debug("MF - on_pubsub_tabs_allowchange")
+        self.allow_tab_change = True
+    
+    def on_pubsub_status_set(self, data):
+        """Update the status bar from pubsub event"""
+        self.update_status_bar(data)
+    
+    def on_pubsub_status_clear(self):
+        """Clear the status bar from pubsub event"""
+        self.clear_status_bar()
+    
+    ##############################
+    # EVENTS - UI
     
     def on_menu_help_license(self, event: wx.Event):
         """Show the license file from the menu"""
@@ -183,14 +208,15 @@ class MainFrame(wx.Frame):
                         obss_y = yaml.safe_load(f)
                         root = Path(pathname).parent
                         self.observatories = Observatories(obss_y, root)
-                        self.tab_main_pane_obs.set_observatories(self.observatories)
                         
                     self.update_status_bar("Loading exoclock planet and star data...")
                     self.exoclock_db: ExoClockData = ExoClockData(self.observatories.root_dir)
                     self.tab_main_pane_mt.set_db(self.exoclock_db)
                     self.tab_main_pane_st.set_db(self.exoclock_db)
                     self.tab_main_pane_sd.set_db(self.exoclock_db)
-                    self.tab_main_pane_obs.notify_observers_obs()
+                    self.tab_main_pane_obs.set_observatories(self.observatories)
+                    self.clear_status_bar()
+                    
             except IOError as err:
                 print(err)
                 wx.LogError(f"Cannot open file '{pathname}'.")
@@ -206,7 +232,10 @@ class MainFrame(wx.Frame):
         if previous == 0:
             print("We switched from Observatory!")
 
-        
+    def on_tab_main_page_changing(self, event: wx.BookCtrlEvent):
+        if self.allow_tab_change:
+            event.Skip()
+
     ##############################
     # HELPERS
         

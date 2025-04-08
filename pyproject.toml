@@ -23,6 +23,7 @@ dependencies = [
   "astroplan",
   "astroquery",
   "wxpython",
+  "pypubsub",
   "jsonschema"
 ]
 dynamic = ["version"]

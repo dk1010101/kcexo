@@ -87,16 +87,16 @@ class TransitForm(wx.Panel):
         lbl_1 = wx.StaticText(self, wx.ID_ANY, name)
         top_sizer.Add(lbl_1, (row, 0), flag=wx.ALIGN_CENTRE_VERTICAL|wx.ALIGN_RIGHT)
         # start date
-        self.dt_start = adv.DatePickerCtrl(self, wx.ID_ADD)
-        self.dt_start.SetSize((155, -1))
+        self.dt_start = adv.DatePickerCtrl(self, wx.ID_ADD, style=adv.DP_DROPDOWN, size=(125, -1))
+        #self.dt_start.SetSize((155, -1))
         top_sizer.Add(self.dt_start, (row, 1), span=(1, 2), flag=wx.ALIGN_CENTRE_VERTICAL)
         if self.has_end_duration:
             # end date label
             lbl_2 = wx.StaticText(self, wx.ID_ANY, "End Date")
             top_sizer.Add(lbl_2, (row, 3), span=(1, 2), flag=wx.ALIGN_CENTRE_VERTICAL|wx.ALIGN_RIGHT)
             # end date control
-            self.dt_end = adv.DatePickerCtrl(self, wx.ID_ADD)
-            self.dt_end.SetSize((155, -1))
+            self.dt_end = adv.DatePickerCtrl(self, wx.ID_ADD, style=adv.DP_DROPDOWN, size=(125, -1))
+            #self.dt_end.SetSize((155, -1))
             top_sizer.Add(self.dt_end, (row, 5), flag=wx.ALIGN_CENTRE_VERTICAL)
             sd = self.dt_start.GetValue()
             ed = sd.Add(wx.DateSpan(days=1))
@@ -105,10 +105,12 @@ class TransitForm(wx.Panel):
             ### row -/3/1
             lbl_3 = wx.StaticText(self, wx.ID_ANY, "Num Days")
             top_sizer.Add(lbl_3, (row, 0), flag=wx.ALIGN_CENTRE_VERTICAL|wx.ALIGN_RIGHT)
-            self.txt_num_days = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER, name="txt_num_days", validator=NumberValidator())
-            self.txt_num_days.SetValue("1")
-            self.txt_num_days.SetSize((125, -1))
-            top_sizer.Add(self.txt_num_days, (row, 1), span=(1, 2), flag=wx.ALIGN_CENTRE_VERTICAL)
+            #self.txt_num_days = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER, name="txt_num_days", validator=NumberValidator())
+            #self.txt_num_days.SetValue("1")
+            #self.txt_num_days.SetSize((125, -1))
+            #top_sizer.Add(self.txt_num_days, (row, 1), span=(1, 2), flag=wx.ALIGN_CENTRE_VERTICAL)
+            self.sp_num_days = wx.SpinCtrl(self, wx.ID_ANY, "", size=(125,-1), min=0, max=365*10, initial=1, name='sp_num_days')
+            top_sizer.Add(self.sp_num_days, (row, 1), span=(1, 2), flag=wx.ALIGN_CENTRE_VERTICAL)
             row += 1
         
         ### row 1/4/2
@@ -162,8 +164,11 @@ class TransitForm(wx.Panel):
             self.bt_find.Bind(wx.EVT_BUTTON, self.on_bt_find)
         
         if self.has_end_duration:
-            self.txt_num_days.Bind(wx.EVT_TEXT_ENTER, self.on_txt_num_days_change)
-            self.txt_num_days.Bind(wx.EVT_KILL_FOCUS, self.on_txt_num_days_change)
+            # self.txt_num_days.Bind(wx.EVT_TEXT_ENTER, self.on_txt_num_days_change)
+            # self.txt_num_days.Bind(wx.EVT_KILL_FOCUS, self.on_txt_num_days_change)
+            self.sp_num_days.Bind(wx.EVT_SPINCTRL, self.on_sp_num_days_change)
+            # self.sp_num_days.Bind(wx.EVT_TEXT, self.on_sp_num_days_change)
+            self.sp_num_days.Bind(wx.EVT_KILL_FOCUS, self.on_sp_num_days_change)
             self.dt_start.Bind(adv.EVT_DATE_CHANGED, self.on_dt_start_change)
             self.dt_end.Bind(adv.EVT_DATE_CHANGED, self.on_dt_end_change)
         
@@ -182,7 +187,16 @@ class TransitForm(wx.Panel):
             self.target_name = ""
             self.star_name = ""
             wx.MessageBox("Target not found! Please try again.", "Not found...", style=wx.OK|wx.ICON_EXCLAMATION)
-        
+    
+    def on_sp_num_days_change(self, event):
+        """Make sure that start, end and num days are all in sync"""
+        # self.sp_num_days.SetFocus()
+        new_val = int(self.sp_num_days.GetValue())
+        delta = wx.DateSpan(days=new_val)
+        sd = self.dt_start.GetValue()
+        ed = sd.Add(delta)
+        self.dt_end.SetValue(ed)
+    
     def on_txt_num_days_change(self, event):
         """Make sure that start, end and num days are all in sync"""
         new_val = int(self.txt_num_days.GetValue())
@@ -190,29 +204,33 @@ class TransitForm(wx.Panel):
         sd = self.dt_start.GetValue()
         ed = sd.Add(delta)
         self.dt_end.SetValue(ed)
-        self.dt_start.SetFocus()
+        # self.dt_start.SetFocus()
         
     def on_dt_start_change(self, event):
         """Make sure that start, end and num days are all in sync"""
-        new_val = int(self.txt_num_days.GetValue())
+        # new_val = int(self.txt_num_days.GetValue())
+        # self.dt_start.SetFocus()
+        new_val = int(self.sp_num_days.GetValue())
         delta = wx.DateSpan(days=new_val)
         sd = self.dt_start.GetValue()
         ed = sd.Add(delta)
         self.dt_end.SetValue(ed)
-        self.dt_start.SetFocus()
+        
         
     def on_dt_end_change(self, event):
         """Make sure that start, end and num days are all in sync"""
+        # self.dt_end.SetFocus()
         sd: wx.DateTime = self.dt_start.GetValue()
         ed: wx.DateTime = self.dt_end.GetValue()
         if ed < sd:
             wx.MessageBox("End date cannot be earlier than the start date.\nReverting to start date + one day.", "Doh!", wx.OK|wx.ICON_ERROR)
-            self.txt_num_days.SetValue("1")
+            self.sp_num_days.SetValue(1)
+            # self.txt_num_days.SetValue("1")
             self.on_dt_start_change(None)
         else:
-            delta: wx.TimeSpan = ed- sd
-            self.txt_num_days.SetValue(str(delta.GetDays()))
-        self.dt_start.SetFocus()
+            delta: wx.TimeSpan = ed-sd
+            self.sp_num_days.SetValue(int(delta.GetDays()))
+            # self.txt_num_days.SetValue(str(delta.GetDays()))
         
     def on_bt_apply(self, event):
         """Submit the form"""

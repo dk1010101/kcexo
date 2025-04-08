@@ -1,0 +1,6 @@
+"status.set" data=message
+"status.clear"
+"observatory.change" data=self.observatory
+"utcoffset.change", data=self.utc_offset_hrs
+"tabs.preventchange"
+"tabs.allowchange"

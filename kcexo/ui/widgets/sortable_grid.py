@@ -5,7 +5,7 @@ from typing import List, Any, Callable
 import numpy as np
 
 import astropy.units as u
-from astropy.time import Time
+from astropy.time import Time, TimezoneInfo
 
 import wx
 import wx.grid
@@ -32,13 +32,6 @@ class GridData():
             col_graph_prefix (str, optional): Prefix used to denote which cells should be rendered as graphs. Defaults to "GRAPH_".
             row_height (int | None, optional): Heigh of each row. Mainly useful when rendering plots. Defaults to None meaning that it will be inferred.
         """
-        if len(data[0]) != len(col_names):
-            raise ValueError("Number of columns in the data and the number of column names must match!")
-        if col_widths and len(col_widths) != len(col_names):
-            raise ValueError("Number of col widths (when provided) must be the same as the number of columns")
-        if col_formatting and len(col_formatting) != len(col_names):
-            raise ValueError("Number of col formatting functions (when provided) must be the same as the number of columns")
-                
         self.data: List[List[Any]] = data
         self.col_names: List[str] = col_names
         self.col_widths: List[float]
@@ -50,7 +43,7 @@ class GridData():
         if col_formatting:
             self.col_formatting = col_formatting
         else:
-            self.col_formatting = [lambda x: x] * len(self.col_names)
+            self.col_formatting = [col_fmt_str] * len(self.col_names)
         self.col_graph_prefix: str = col_graph_prefix
         self.plot_column_idx: list = []
         
@@ -70,7 +63,16 @@ class GridData():
                 self.row_height = 250  # default if we have a plot
             else:
                 self.row_height = 25  # sensible default
-                
+        
+        if not data:
+            return  # really?
+        if len(data[0]) != len(col_names):
+            raise ValueError("Number of columns in the data and the number of column names must match!")
+        if col_widths and len(col_widths) != len(col_names):
+            raise ValueError("Number of col widths (when provided) must be the same as the number of columns")
+        if col_formatting and len(col_formatting) != len(col_names):
+            raise ValueError("Number of col formatting functions (when provided) must be the same as the number of columns")
+                     
     def __len__(self):
         """Length of this class is just the number of rows of data."""
         return len(self.data)
@@ -79,17 +81,24 @@ class GridData():
 class SortableGrid(wx.grid.Grid):
     """Simple grid control that supports click-on-column-name for sorting and cells with images."""
     def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
         self.data: GridData = None
         self.columns = []
-        self.plot_column_index = []
+        self.plot_column_index = set()
         self.current_sort_col = None
         self.sort_ascending = True
         self.plot_column_prefix = ""
         
-        self.SetDefaultCellAlignment(wx.ALIGN_LEFT, wx.ALIGN_CENTRE)
+        super().__init__(*args, **kw)
         
-        self.CreateGrid(1, 1)
+        self.CreateGrid(0, 0)
+        
+        self.SetDefaultCellAlignment(wx.ALIGN_LEFT, wx.ALIGN_CENTRE)
+        self.EnableEditing(0)
+        self.HideRowLabels()
+        self.SetMinSize((100, 100))
+        self.SetSize((100, 100))
+        self.AutoSizeRows()
+        # self.ShowScrollbars(True, True)
         
         self.Bind(wx.grid.EVT_GRID_LABEL_LEFT_CLICK, self.on_label_click)
         self.Bind(wx.EVT_SIZE, self.on_size)  # For initial drawing and resize
@@ -114,7 +123,7 @@ class SortableGrid(wx.grid.Grid):
         
         if not data or len(data)==0:
             self.columns = []
-            self.plot_column_index = []
+            self.plot_column_index = set()
             self.ClearGrid()
             if self.GetNumberCols() > 0:
                 self.DeleteCols(0, self.GetNumberCols())
@@ -123,8 +132,12 @@ class SortableGrid(wx.grid.Grid):
             return
         else:
             self.columns = data.col_names
-
+            self.plot_column_prefix = data.col_graph_prefix
             self.ClearGrid()
+            
+            for idx, e in enumerate(data.col_formatting):
+                if inspect.isclass(e) and issubclass(e, wx.grid.GridCellRenderer):
+                    self.plot_column_index.add(idx)
 
             num_cols = self.GetNumberCols()
             num_rows = self.GetNumberRows()
@@ -145,14 +158,14 @@ class SortableGrid(wx.grid.Grid):
 
             for row in range(self.GetNumberRows()):
                 self.SetRowSize(row, self.data.row_height)
-                
-            for idx, w in enumerate(self.data.col_widths):
-                self.SetColSize(idx, w)
-                
+
             if not self.data.col_widths:
                 for idx in self.plot_column_index:
-                    self.SetColSize(idx, 300)
-
+                    self.SetColSize(idx, 200)
+            else:
+                for idx, w in enumerate(self.data.col_widths):
+                    self.SetColSize(idx, w)
+            
             self._populate_grid()
 
     def refresh_data(self, 
@@ -184,6 +197,7 @@ class SortableGrid(wx.grid.Grid):
                     self.SetCellRenderer(row_idx, col_idx, fmt_fn(row_data[col_idx]))
                 else:
                     self.SetCellValue(row_idx, col_idx, fmt_fn(row_data[col_idx]))
+        # self.Fit()
 
     def _sort_data(self, col_name: str) -> None:
         """Sorts the data (excluding the plot data) based on col_name."""
@@ -195,6 +209,7 @@ class SortableGrid(wx.grid.Grid):
     # EVENTS
     
     def on_size(self, event):
+        self.FitInside()
         self.ForceRefresh()  # Force a redraw on resize
         event.Skip()
 
@@ -214,7 +229,7 @@ class SortableGrid(wx.grid.Grid):
     def on_label_click(self, event):
         """Handles column label clicks for sorting."""
         col = event.GetCol()
-        if col == -1 or col == self.plot_column_index:
+        if col == -1 or col in self.plot_column_index:
             return
 
         if self.current_sort_col == col:
@@ -230,7 +245,7 @@ class SortableGrid(wx.grid.Grid):
             if i == col:
                 label = f"{self.columns[i]} ▲" if self.sort_ascending else f"{self.columns[i]} ▼"
                 self.SetColLabelValue(i, label)
-            elif i != self.plot_column_index:
+            elif i not in self.plot_column_index:
                 self.SetColLabelValue(i, self.columns[i])
 
 def col_fmt_str(v: Any) -> str:
@@ -244,10 +259,11 @@ def col_fmt_float(v: float|np.float32|np.float64|np.float16,
         return "--"
     return f"{float(v):.{precision}f}"
 
-def col_fmt_timeonly(v: Time) -> str:
+def col_fmt_timeonly(v: Time, utc_offset_hours: float=0.0) -> str:
     """Convert `Time` in to string keeping only the time part."""
-    s = v.to_string()
-    return s[11:19]
+    offset = TimezoneInfo(utc_offset=utc_offset_hours*u.hour)
+    dt = v.to_datetime(timezone=offset)
+    return dt.strftime("%H:%M:%S")
 
 def col_fmt_length(v: u.Quantity['length'], 
                      target_unit: Any=u.mm) -> str:
@@ -262,3 +278,11 @@ def col_fmt_length_as_f(v: u.Quantity['length'],
 def col_fmt_quantity_as_f(v: u.Quantity) -> str:
     """Convert quantity to string via float"""
     return str(v.value)
+
+def col_fmt_datetime(v: Time, utc_offset_hours: float=0.0, two_row: bool=True) -> str:
+    offset = TimezoneInfo(utc_offset=utc_offset_hours*u.hour)
+    dt = v.to_datetime(timezone=offset)
+    if two_row:
+        return dt.strftime("%Y-%m-%d")+"\n"+dt.strftime("%H:%M:%S")
+    else:
+        return dt.strftime("%Y-%m-%d %H:%M:%S")

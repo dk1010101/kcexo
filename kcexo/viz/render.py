@@ -21,6 +21,10 @@ def render_to_png(fig: plt.figure.Figure, clear_fig: bool = True) -> bytes:
     image_data: bytes = buf.getvalue()  # Get the image data as bytes
     buf.close()
     if clear_fig:
-        fig.clear()
-        plt.pyplot.close(fig)
+        close_figure(fig)
     return image_data
+
+def close_figure(fig: plt.figure.Figure) -> None:
+    """Clear and close the figure."""
+    fig.clear()
+    plt.pyplot.close(fig)

@@ -57,7 +57,35 @@ class ExoClockData():
                 for name, p in self.data.items()
                 if (telescope_only and (p.status.min_aperture <= observatory.aperture)) or (not telescope_only)
             }
-              
+
+    def get_transits_for_single_target(self,
+                                       target: str,
+                                       start_time: Time,
+                                       end_time: Time,
+                                       observatory: Observatory,
+                                       night_only: bool = True,
+                                       telescope_only: bool = True,
+                                       ) -> Dict[str, List[Transit]]:
+        """Return a map from planet name to a list of transits, optionally filtered by telescope aperture and "night only" constraint for a single target.
+
+        Args:
+            start_time (Time): Transits start time
+            end_time (Time): Transits end time
+            observatory (Observatory): Location and the instrument that will be used.
+            night_only (bool, optional): Should only night transits be listed? Defaults to True.
+            telescope_only (bool, optional): Should only planets potentially visible with the equipment be listed. Defaults to True.
+            
+        Returns:
+            Dict[str, Transit]: Mapping from planet name to transit objects
+        """
+        with warnings.catch_warnings(action="ignore", category=TargetNeverUpWarning):
+            planet = self.data[target]
+            if (telescope_only and (planet.status.min_aperture <= observatory.aperture)):
+                transits = planet.get_transits(start_time, end_time, observatory, night_only)
+                return { target: transits }
+            else:
+                return {}
+  
     def filter_transits(self,
                         all_transits: Dict[str, List[Transit]],
                         observatory: Observatory,

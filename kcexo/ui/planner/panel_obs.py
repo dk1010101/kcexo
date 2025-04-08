@@ -3,6 +3,8 @@
 import datetime
 from typing import Any
 
+from pubsub import pub
+
 import astropy.units as u
 
 import wx
@@ -98,12 +100,15 @@ class ObsPanel(wx.Panel):
     
     def set_observatories(self, obss: Observatories) -> None:
         self.observatories = obss
+        if obss is None:
+            print("obss is none?!")
+            return
         self.known_obs = list(obss.observatories.keys())
         self.cb_obs.SetItems(self.known_obs)
         self.observatory = obss.observatories[obss.default_observatory]
         idx = self.known_obs.index(obss.default_observatory)
         self.cb_obs.SetSelection(idx)
-        self.update()
+        self.on_cb_obs_change(None)  # since the above does not fire the event
         
     def update(self) -> None:
         if not self.observatories:
@@ -152,13 +157,13 @@ class ObsPanel(wx.Panel):
     def on_cb_obs_change(self, event) -> None:
         """Deal with the change of observatory."""
         # self.observatory = self.observatories[event.GetString()]
-        wx.Yield()
+        # wx.Yield()
         with wx.BusyCursor():
-            self.parent.update_status_bar("Updating observatory...")
-            
+            pub.sendMessage("status.set", data="Updating observatory...")
             self.update()
-            self.notify_observers_obs()
-            self.parent.clear_status_bar()
+            self.on_cb_obs_show_utc_change(None)
+            pub.sendMessage("observatory.change", data=self.observatory)
+            pub.sendMessage("status.clear")
 
     def on_cb_obs_show_utc_change(self, event) -> None:
         """Change visibility of UTC controls depending on if we are all UTC or not."""
@@ -167,10 +172,12 @@ class ObsPanel(wx.Panel):
             self.lbl_obs_utc_offset.Disable()
             self.txt_obs_utc_offset.Disable()
             self.bt_obs_utc_reset.Disable()
+            self.utc_offset_hrs = 0.0
         else:
             self.lbl_obs_utc_offset.Enable()
             self.txt_obs_utc_offset.Enable()
             self.bt_obs_utc_reset.Enable()
+        pub.sendMessage("utcoffset.change", data=self.utc_offset_hrs)
 
     def on_bt_obs_utc_reset(self, event) -> None:
         """Reset the UTC offset text box"""
@@ -178,9 +185,10 @@ class ObsPanel(wx.Panel):
             now = datetime.datetime.now()
             self.utc_offset_hrs = self.observatory.observer.timezone.utcoffset(now).total_seconds() / 3600.0
             self.txt_obs_utc_offset.SetValue(f"{self.utc_offset_hrs:+.1f}")
-            self.notify_observers_utc()
         else:
             self.txt_obs_utc_offset.SetValue("")
+            self.utc_offset_hrs = 0.0
+        pub.sendMessage("utcoffset.change", data=self.utc_offset_hrs)
 
     def on_txt_obs_utc_offset_change(self, event) -> None:
         """Save the new UTC offset."""
@@ -188,18 +196,4 @@ class ObsPanel(wx.Panel):
             return
         val = self.txt_obs_utc_offset.GetValue()
         self.utc_offset_hrs = float(val)
-        self.notify_observers_utc()
-    
-    def add_observer(self, obj: Any) -> None:
-        """Add an object we need to tell about changes to the selected observatory."""
-        self.observers.append(obj)
-        
-    def notify_observers_obs(self) -> None:
-        """Update all observers with the new observatory data"""
-        for o in self.observers:
-            o.set_observatory(self.observatory)
-            
-    def notify_observers_utc(self) -> None:
-        """Update all observers with the new UTC offset"""
-        for o in self.observers:
-            o.set_utc_offset(self.utc_offset_hrs)
+        pub.sendMessage("utcoffset.change", data=self.utc_offset_hrs)

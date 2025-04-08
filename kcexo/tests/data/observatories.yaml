@@ -44,6 +44,7 @@ observatories:
       temperature_C: 0.0
       rel_humidity_percentage: 55.0
       pressure_hPa: 1033.0
+      horizon_file: "./horizon_alnitak.csv"
     instrument:
       optics:
         name: "A1"
