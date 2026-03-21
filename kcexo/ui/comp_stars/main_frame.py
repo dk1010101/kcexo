@@ -230,11 +230,7 @@ class MainFrame(wx.Frame):
                     self.target_name = hdr.get('OBJECT', '')
                     target_c = ''
                     if self.target_name:
-                        if "_" in self.target_name:
-                            # some observatories add user name after the object name. this is evil.
-                            a, _ = self.target_name.split("_", 1)
-                            self.target_name = a
-                        target_c = SkyCoord.from_name(self.target_name)
+                        target_c = self.parse_target_name(self.target_name)
                     if target_c is None or not target_c:
                         target_c = ''
                         if 'OBJCTRA' in hdr and 'OBJCTDEC' in hdr:
@@ -303,6 +299,31 @@ class MainFrame(wx.Frame):
             
             except IOError:
                 wx.LogError(f"Cannot open file '{pathname}'.")
+
+    def parse_target_name(self, target_name: str) -> str:
+        if "_" in target_name:
+            # some observatories add user name after the object name. this is evil.
+            a, _ = target_name.split("_", 1)
+            target_name = a
+        try:
+            target_c = SkyCoord.from_name(target_name)
+        except BaseException:
+            # nothing found...
+            # let's try removing any capital letters near the end
+            if target_name[-2].upper() == target_name[-2]:
+                target_name = target_name[:-2]+target_name[-1]
+                try:
+                    target_c = SkyCoord.from_name(target_name)
+                except BaseException:
+                    # still no joy
+                    pass
+            target_name = target_name[:-1]
+            try:
+                target_c = SkyCoord.from_name(target_name)
+            except BaseException:
+                print(f"Cannot find the target with modified name of '{target_name}'")
+                raise
+        return target_c
 
     def on_menu_export(self, event):
         """Export the data to file"""

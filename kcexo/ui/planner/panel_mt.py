@@ -54,8 +54,8 @@ class MultipleTargetsPanel(wx.Panel):
         self._start_date: Time = Time.now()
         self._end_date: Time = Time.now()
         self.must_refresh: bool = True
-        self.transits: Dict[str, Transit]
-        self.filtered_transits: Dict[str, Transit]
+        self.transits: Dict[str, Transit] = {}
+        self.filtered_transits: Dict[str, Transit] = {}
         self.visible: List[str] = []
         
         super().__init__(parent=parent, id=wid, pos=pos, size=size, name=name, *argv, **kwargs)
@@ -163,7 +163,7 @@ class MultipleTargetsPanel(wx.Panel):
         self.log.debug("STP - update_grid")
         with prevent_tab_changes("Updating All Targets transit list..."):
         
-            col_names = ["Target", "Priority", "# Obs", "# Recent", 'Min Aper (")', "Mag R", "Mag V", "Depth R", "Duration (hr)", "Pre", "Start", "End", "Post", "GRAPH_Transit Profile", "GRAPH_Horizon Transit", "GRAPH_Sky Transit"]
+            col_names = ["Target", "Priority", "# Obs", "# Recent", 'Min Aper (")', "Mag R", "Mag V", "Depth R", "Duration (hr)", "Pre", "Start", "End", "Post", "GRAPH_Transit Profile", "GRAPH_Altitude Chart", "GRAPH_Azimuth Chart"]
             col_width = [20*5, 13*5, 18*5, 18*5, 18*5, 12*5, 12*5, 12*5, 17*5, 13*5, 13*5, 13*5, 13*5, 200, 200, 200]
             datetime_renderer = partial(col_fmt_datetime, utc_offset_hours=self.utc_offset_hours)
             col_formatting = [col_fmt_str, col_fmt_str, col_fmt_str, col_fmt_str, partial(col_fmt_length_as_f,target_unit=u.imperial.inch), col_fmt_str, col_fmt_str, col_fmt_quantity_as_f, col_fmt_quantity_as_f, datetime_renderer, datetime_renderer, datetime_renderer, datetime_renderer, PlotCellRenderer, PlotCellRenderer, PlotCellRenderer]

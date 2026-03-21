@@ -94,6 +94,93 @@ observatories:
       limiting_mag: 15.0
       exo_hours_before: 1.0
       exo_hours_after: 1.0
+  - name: "SLOOH Chile2"
+    physical:
+      lat_deg: -33.269
+      lon_deg: -70.534
+      elevation_m: 1450
+      time_zone: "America/Santiago"
+      temperature_C: 10.0
+      rel_humidity_percentage: 23.0
+      pressure_hPa: 1022.0
+    instrument:
+      optics:
+        name: "CDK17"
+        focal_length_mm: 2938.0
+        aperture_mm: 432.0
+      sensor:
+        name: "FLI Proline 16803"
+        size_x_mm: 36.864
+        size_y_mm: 36.864
+        num_pix_x: 4096 
+        num_pix_y: 4096
+        pix_x_size_um: 9.0
+        pix_y_size_um: 9.0
+        crota1: 0.0
+        crota2: 0.0
+    configuration:
+      twilight: "civil"
+      limiting_mag: 18.0
+      exo_hours_before: 1.0
+      exo_hours_after: 1.0
+  - name: "SLOOH Aus 1"
+    physical:
+      lat_deg: -31.2816709
+      lon_deg: 149.0801825
+      elevation_m: 805
+      time_zone: "Australia/Canberra"
+      temperature_C: 10.0
+      rel_humidity_percentage: 23.0
+      pressure_hPa: 1022.0
+    instrument:
+      optics:
+        name: "CDK20"
+        focal_length_mm: 3454.0
+        aperture_mm: 508.0
+      sensor:
+        name: "FLI Proline 16803"
+        size_x_mm: 36.864
+        size_y_mm: 36.864
+        num_pix_x: 4096 
+        num_pix_y: 4096
+        pix_x_size_um: 9.0
+        pix_y_size_um: 9.0
+        crota1: 0.0
+        crota2: 0.0
+    configuration:
+      twilight: "civil"
+      limiting_mag: 18.0
+      exo_hours_before: 1.0
+      exo_hours_after: 1.0
+  - name: "Dubbo Aus"
+    physical:
+      lat_deg: -32.293853
+      lon_deg: 148.585669
+      elevation_m: 74
+      time_zone: "Australia/Canberra"
+      temperature_C: 10.0
+      rel_humidity_percentage: 23.0
+      pressure_hPa: 1022.0
+    instrument:
+      optics:
+        name: "CDK20"
+        focal_length_mm: 3454.0
+        aperture_mm: 508.0
+      sensor:
+        name: "SBIG STXL 6303"
+        size_x_mm: 27.65
+        size_y_mm: 18.48 
+        num_pix_x: 3072 
+        num_pix_y: 2048
+        pix_x_size_um: 9.0
+        pix_y_size_um: 9.0
+        crota1: 0.0
+        crota2: 0.0
+    configuration:
+      twilight: "civil"
+      limiting_mag: 18.0
+      exo_hours_before: 1.0
+      exo_hours_after: 1.0
 ################################################
 configuration:
   root: "./data/"

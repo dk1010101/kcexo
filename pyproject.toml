@@ -8,8 +8,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kcexo"
 description = "Collection of randome exoplanet observation planning and analysis scripts and libraries"
-requires-python = ">=3.12"
-readme = { file = "README.rst", content-type = "text/x-rst" }
+requires-python = ">=3.11"
+readme = { file = "README.md", content-type = "text/x-md" }
 license = { file = "licenses/LICENSE.rst" }
 authors = [
   { name = "Daniel Kustrin", email = "daniel_kustrin@yahoo.co.uk" },
